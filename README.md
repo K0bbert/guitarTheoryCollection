@@ -1,0 +1,1 @@
+Write fretboards in markdown to keep up with guitar lessons.

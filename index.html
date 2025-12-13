@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Guitar Lesson Notes</title>
+  <link rel="stylesheet" href="fretboard.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    /* increase page content width; change to 100% width with padding */
+    .hub { width: 98%; max-width: 1850px; margin: 0 auto; }
+    .links { margin-bottom: 20px; }
+    .demo { margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="hub">
+      <!-- Toogle buttons -->
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+        <button id="toggle-labels" class="label-toggle-button">Show Labels</button>
+        <button id="toggle-enharmonic" class="label-toggle-button">♭</button>
+      </div>
+
+      <div id="md-top" class="md-content" data-md="header.md" style="display:none; margin-top:18px;"></div>
+
+    </section>
+
+    <!-- Example markdown block (loaded from example.md) -->
+    <div id="md-example" class="md-content" data-md="example.md" style="display:none; margin-top:18px;"></div>
+
+    <div id="md-grid-example" class="md-content" data-md="grid-example.md" style="display:none; margin-top:18px;"></div>
+
+    <div id="md-bottom" class="md-content" data-md="footer.md" style="display:none; margin-top:18px;"></div>
+
+  </div>
+
+  <script src="fretboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="fretboard-grid.js"></script>
+  <script src="md-loader.js"></script>
+</body>
+</html>
