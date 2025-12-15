@@ -122,3 +122,28 @@
   ]
 }
 ```
+
+# Arpeggio concatinations:
+## Maj7 (shape row 1 + row 3)
+
+```fretboard
+{
+  "startFret": 4,
+  "endFret": 12,
+  "width": 750,
+  "height": 270,
+  "notes": [
+    { "fret": 5, "string": 6, "color": "red", "label": "R" },
+    { "fret": 4, "string": 5, "color": "blue", "label": "" },
+    { "fret": 7, "string": 5, "color": "blue", "label": "" },
+    { "fret": 6, "string": 4, "color": "blue", "label": "" },
+    { "fret": 7, "string": 4, "color": "red", "label": "R" },
+    { "fret": 6, "string": 3, "color": "blue", "label": "" },
+    { "fret": 9, "string": 3, "color": "blue", "label": "" },
+    { "fret": 9, "string": 2, "color": "blue", "label": "" },
+    { "fret": 10, "string": 2, "color": "red", "label": "R" },
+    { "fret": 9, "string": 1, "color": "blue", "label": "" },
+    { "fret": 12, "string": 1, "color": "blue", "label": "" }
+  ]
+}
+```
