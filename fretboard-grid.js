@@ -137,6 +137,13 @@
                             inp.value = JSON.stringify(item.notes);
                             container.appendChild(inp);
                         }
+                        if (item.title !== undefined) {
+                            const inp = document.createElement('input');
+                            inp.type = 'hidden';
+                            inp.id = `${baseId}-fb-${idx}-title`;
+                            inp.value = String(item.title);
+                            container.appendChild(inp);
+                        }
                     }
                 }
 
@@ -285,6 +292,7 @@
 
                 const label = document.createElement('div');
                 label.className = 'fretboard-label';
+                label.id = `${baseId}-fb-${i}-label`;
                 //label.textContent = `Fretboard #${i}`;
 
                 fretboardItem.appendChild(svg);
@@ -314,6 +322,13 @@
                 const startInput = document.getElementById(`${baseId}-fb-${i}-start-fret`);
                 const endInput = document.getElementById(`${baseId}-fb-${i}-end-fret`);
                 const notesInput = document.getElementById(`${baseId}-fb-${i}-notes`);
+                const titleInput = document.getElementById(`${baseId}-fb-${i}-title`);
+                const labelEl = document.getElementById(`${baseId}-fb-${i}-label`);
+
+                // Set label text if title input exists
+                if (titleInput && titleInput.value && labelEl) {
+                    labelEl.textContent = titleInput.value;
+                }
 
                 // Determine startFret: convert user-facing 1-based to 0-based internal value
                 let startArg = { value: 0 };

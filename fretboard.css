@@ -7,7 +7,7 @@ g.note.transparent:hover {
 :root {
     /* Tune these values to change grid cell size and page layout */
     --grid-cell-min-width: 90px; /* minimum width per cell before wrapping */
-    --grid-cell-row-height: 225px; /* row height for each grid row (controls svg size) */
+    --grid-cell-row-height: 240px; /* row height for each grid row (controls svg size) */
     --grid-title-col-width: 90px; /* width for the optional left title column */
     --fretboard-scale: 0.75; /* global scale factor for rendered fretboards (1 = 100%) */
 }
