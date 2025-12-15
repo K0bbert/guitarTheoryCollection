@@ -27,7 +27,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 1, "color": "blue", "label": "M3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "A Ionian" },
+                                              ], "title": "A Ionian/ Major" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":  "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
@@ -122,7 +122,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label": "b3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "D Aeolian" },
+                                              ], "title": "D Aeolian/ Natural Minor" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 6, "string": 6, "color": "blue", "label": "b2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
