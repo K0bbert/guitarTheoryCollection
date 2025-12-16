@@ -147,7 +147,10 @@
      *     "|---------|",
      *     "|-----2---|",
      *     "|--1--1---|",
-     *     "|--0------3-|"
+     *     "|--0------3-|",
+     *     "",  // Empty string for line break
+     *     "|---------|",
+     *     ... (next section)
      *   ]
      * }
      */
@@ -158,12 +161,6 @@
         }
 
         const lines = config.content;
-
-        // Validate we have 6 strings (standard guitar)
-        if (lines.length !== 6) {
-            console.warn('Invalid tabulature: expected 6 strings, got', lines.length);
-            return null;
-        }
 
         // Parse tuning if provided
         let tuning = null;
@@ -178,16 +175,55 @@
             }
         }
 
-        // Normalize while preserving vertical alignment and get tokens
-        const tokenLines = normalizeTableture(lines);
+        // Split content into sections by empty strings
+        const sections = [];
+        let currentSection = [];
 
-        // Find the maximum number of tokens
-        const maxTokens = Math.max(...tokenLines.map(tokens => tokens.length));
+        for (const line of lines) {
+            if (line === '' || line === null) {
+                // Empty line indicates a section break
+                if (currentSection.length > 0) {
+                    sections.push(currentSection);
+                    currentSection = [];
+                }
+            } else {
+                currentSection.push(line);
+            }
+        }
+
+        // Add the last section if it exists
+        if (currentSection.length > 0) {
+            sections.push(currentSection);
+        }
+
+        // Validate and parse each section
+        const parsedSections = [];
+        for (const section of sections) {
+            if (section.length !== 6) {
+                console.warn('Invalid tabulature section: expected 6 strings, got', section.length);
+                continue;
+            }
+
+            // Normalize while preserving vertical alignment and get tokens
+            const tokenLines = normalizeTableture(section);
+
+            // Find the maximum number of tokens
+            const maxTokens = Math.max(...tokenLines.map(tokens => tokens.length));
+
+            parsedSections.push({
+                tokenLines: tokenLines,
+                maxTokens: maxTokens,
+                numStrings: tokenLines.length
+            });
+        }
+
+        if (parsedSections.length === 0) {
+            console.warn('No valid tabulature sections found');
+            return null;
+        }
 
         return {
-            tokenLines: tokenLines,
-            maxTokens: maxTokens,
-            numStrings: tokenLines.length,
+            sections: parsedSections,
             tuning: tuning
         };
     }
@@ -257,6 +293,7 @@
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('font-family', TAB_CONFIG.fontFamily);
                 text.setAttribute('font-size', TAB_CONFIG.fontSize);
+                text.setAttribute('font-weight', 'bold');
                 text.setAttribute('fill', TAB_CONFIG.numberColor);
                 text.setAttribute('class', 'tab-content');
                 text.textContent = token.value;
@@ -273,36 +310,40 @@
      * Render the complete tablature
      */
     function renderTabulature(container, tabData) {
-        // Calculate SVG width by accounting for wide spacing
-        let totalWidth = TAB_CONFIG.paddingLeft + TAB_CONFIG.paddingRight;
-        if (tabData.tokenLines.length > 0) {
-            for (const token of tabData.tokenLines[0]) {
-                if (token.type === 'dash' && token.spacing === 'wide') {
-                    totalWidth += TAB_CONFIG.characterWidth * 2.5;
-                } else {
-                    totalWidth += TAB_CONFIG.characterWidth;
+        // Render each section
+        tabData.sections.forEach((section, sectionIndex) => {
+            // Calculate SVG width by accounting for wide spacing
+            let totalWidth = TAB_CONFIG.paddingLeft + TAB_CONFIG.paddingRight;
+            if (section.tokenLines.length > 0) {
+                for (const token of section.tokenLines[0]) {
+                    if (token.type === 'dash' && token.spacing === 'wide') {
+                        totalWidth += TAB_CONFIG.characterWidth * 2.5;
+                    } else {
+                        totalWidth += TAB_CONFIG.characterWidth;
+                    }
                 }
             }
-        }
 
-        const height = (5 * TAB_CONFIG.lineHeight) +
-                       TAB_CONFIG.paddingTop + TAB_CONFIG.paddingBottom;
+            const height = (5 * TAB_CONFIG.lineHeight) +
+                           TAB_CONFIG.paddingTop + TAB_CONFIG.paddingBottom;
 
-        // Create SVG element
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', totalWidth);
-        svg.setAttribute('height', height);
-        svg.setAttribute('class', 'tablature-svg');
-        svg.setAttribute('style', 'background-color: white;');
+            // Create SVG element
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', totalWidth);
+            svg.setAttribute('height', height);
+            svg.setAttribute('class', 'tablature-svg');
+            svg.setAttribute('style', 'background-color: white; margin-bottom: 10px; display: block;');
 
-        // Render each string (from top to bottom, representing strings 1-6)
-        for (let i = 0; i < tabData.numStrings; i++) {
-            const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
-            const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
-            renderString(svg, i, tabData.tokenLines[i], yPosition, tabData.maxTokens, tuningLabel);
-        }
+            // Render each string (from top to bottom, representing strings 1-6)
+            for (let i = 0; i < section.numStrings; i++) {
+                const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
+                // Show tuning labels on all sections
+                const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
+                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel);
+            }
 
-        container.appendChild(svg);
+            container.appendChild(svg);
+        });
     }
 
     /**
