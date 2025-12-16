@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.initFretboardGrids) {
                 try { window.initFretboardGrids(node); } catch (e) { console.error(e); }
             }
+            // initialize any tabulature blocks that may have been injected
+            if (window.initTabulatureEmbeds) {
+                try { window.initTabulatureEmbeds(node); } catch (e) { console.error(e); }
+            }
             // wire global controls after injecting markdown (safe no-op if already bound)
             if (window.initGlobalControls) {
                 try { window.initGlobalControls(); } catch (e) { /* ignore */ }
