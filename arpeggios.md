@@ -479,6 +479,91 @@
 }
 ```
 
+## o7
+```fretboard-grid
+{
+  "id": "arpeggios-grid-3",
+  "rows": 6,
+  "cols": 1,
+  "width": 600,
+  "height": 260,
+  "colTitles": ["o7"],
+  "items": [
+    { "startFret": 3, "endFret": 7, "notes": [
+                                              {"fret": 5, "string": 6, "color": "red", "label": ""},
+                                              {"fret": 3, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 6, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 4, "color": "red", "label": ""},
+                                              {"fret": 5, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 1, "color": "red", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 4, "endFret": 8, "notes": [
+                                              {"fret": 5, "string": 6, "color": "red", "label": ""},
+                                              {"fret": 8, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 6, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 4, "color": "red", "label": ""},
+                                              {"fret": 5, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 1, "color": "red", "label": ""},
+                                              {"fret": 8, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 8, "endFret": 12, "notes": [
+                                              {"fret": 8,  "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 9,  "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": ""},
+                                              {"fret": 10, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 8,  "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 10, "string": 2, "color": "red", "label": ""},
+                                              {"fret": 8,  "string": 1, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 10, "endFret": 14, "notes": [
+                                              {"fret": 11, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": ""},
+                                              {"fret": 10, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 13, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 10, "string": 2, "color": "red", "label": ""},
+                                              {"fret": 13, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 1, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 11, "endFret": 15, "notes": [
+                                              {"fret": 11, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": ""},
+                                              {"fret": 15, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 13, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 3, "color": "red", "label": ""},
+                                              {"fret": 13, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 1, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 1, "endFret": 5, "notes": [
+                                              {"fret": 2, "string": 6, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 6, "color": "red", "label": ""},
+                                              {"fret": 3, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 1, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 2, "string": 3, "color": "red", "label": ""},
+                                              {"fret": 1, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 2, "string": 1, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 1, "color": "red", "label": ""}
+                                             ], "title": "" }
+  ]
+}
+```
+
 # Arpeggio concatinations:
 ## Maj7 (shape row 1 + row 3)
 
@@ -503,7 +588,6 @@
   ]
 }
 ```
-
 
 # this is a tab tast
 
