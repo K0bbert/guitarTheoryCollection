@@ -9,13 +9,18 @@
     // exposed on `window` for the markdown loader to call after rendering.
 
     // Convert user-supplied notes and indices from 1-based to internal indices
-    // user: fret 0 -> internal -1, fret N>0 -> N-1; string 1 -> 0
+    // user: fret 0 -> internal -1, fret N>0 -> N-1, fret 'X' -> 'X' (muted); string 1 -> 0
     function convertUserNotes(notesArr) {
         return notesArr.map(n => {
             const out = Object.assign({}, n);
             if (out.hasOwnProperty('fret')) {
-                const fv = parseInt(out.fret);
-                if (!isNaN(fv)) out.fret = (fv === 0) ? -1 : (fv - 1);
+                // Check if it's 'X' for muted strings
+                if (out.fret === 'X' || out.fret === 'x') {
+                    out.fret = 'X'; // normalize to uppercase
+                } else {
+                    const fv = parseInt(out.fret);
+                    if (!isNaN(fv)) out.fret = (fv === 0) ? -1 : (fv - 1);
+                }
             }
             if (out.hasOwnProperty('string')) {
                 const sv = parseInt(out.string);
@@ -356,8 +361,13 @@
                             notesArg = parsed.map(n => {
                                 const out = Object.assign({}, n);
                                 if (out.hasOwnProperty('fret')) {
-                                    const fv = parseInt(out.fret);
-                                    if (!isNaN(fv)) out.fret = (fv === 0) ? -1 : (fv - 1);
+                                    // Check if it's 'X' for muted strings
+                                    if (out.fret === 'X' || out.fret === 'x') {
+                                        out.fret = 'X'; // normalize to uppercase
+                                    } else {
+                                        const fv = parseInt(out.fret);
+                                        if (!isNaN(fv)) out.fret = (fv === 0) ? -1 : (fv - 1);
+                                    }
                                 }
                                 if (out.hasOwnProperty('string')) {
                                     const sv = parseInt(out.string);

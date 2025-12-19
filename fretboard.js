@@ -123,14 +123,15 @@ class Fretboard {
     setInitialNotes(notesArray) {
         /**
          * Sets initial notes on the fretboard. Each note in the array should be an object with:
-         * - fret: fret number (-1 for open strings, 0+ for fretted notes)
+         * - fret: fret number (-1 for open strings, 0+ for fretted notes, 'X' for muted strings)
          * - string: string number (0-5, where 0 is the highest string)
          * - color: optional color ('blue', 'green', 'red', 'black', 'white') - defaults to 'blue'
          *
          * Example: [
          *   { fret: -1, string: 0, color: 'blue' },  // open string
          *   { fret: 0, string: 1, color: 'red' },     // first fret
-         *   { fret: 3, string: 1, color: 'red' }      // fourth fret
+         *   { fret: 3, string: 1, color: 'red' },     // fourth fret
+         *   { fret: 'X', string: 5, color: 'blue' }   // muted string
          * ]
          */
         for (let noteInfo of notesArray) {
@@ -141,6 +142,13 @@ class Fretboard {
             // Validate inputs
             if (string < 0 || string >= this.consts.numStrings) {
                 console.warn(`Invalid string number: ${string}`);
+                continue;
+            }
+
+            // Handle muted strings (fret: 'X')
+            if (fret === 'X' || fret === 'x') {
+                // Draw muted string marker
+                this.drawMutedNote(string, color, noteInfo.label);
                 continue;
             }
 
@@ -346,6 +354,66 @@ class Fretboard {
         }
     }
 
+    drawMutedNote(string, color, label) {
+        // Draw an 'X' symbol at the open string position for muted strings
+        const x = this.consts.offsetX / 2;
+        const y = this.consts.offsetY + this.consts.stringSpacing * string;
+        const noteId = `muted-s${string}`;
+
+        const note = createSvgElement('g', {
+            'id': noteId,
+            'transform': "translate(" + x + "," + y + ")",
+            'data-x': x,
+            'data-y': y,
+        });
+        this.notes.appendChild(note);
+
+        // Draw X using two lines
+        const size = this.consts.circleRadius * 0.5;
+        const line1 = createSvgElement('line', {
+            'x1': -size,
+            'y1': -size,
+            'x2': size,
+            'y2': size,
+            'stroke': color === 'white' ? 'black' : color,
+            'stroke-width': 3,
+            'stroke-linecap': 'round'
+        });
+        const line2 = createSvgElement('line', {
+            'x1': -size,
+            'y1': size,
+            'x2': size,
+            'y2': -size,
+            'stroke': color === 'white' ? 'black' : color,
+            'stroke-width': 3,
+            'stroke-linecap': 'round'
+        });
+        note.appendChild(line1);
+        note.appendChild(line2);
+
+        // Add optional label
+        if (label !== undefined && label !== null && label !== '') {
+            const text = createSvgElement('text', {
+                'x': 0,
+                'y': this.consts.circleRadius + 12,
+                'text-anchor': 'middle',
+                'dominant-baseline': 'middle',
+                'fill': 'black',
+                'font-size': '12px'
+            });
+            text.textContent = label;
+            note.appendChild(text);
+        }
+
+        // Store in data
+        this.data[noteId] = {
+            type: 'muted',
+            color: color,
+            visibility: 'visible',
+            label: label
+        };
+    }
+
     drawNote(noteId, x, y, noteName, isOpen) {
         //console.log(`Creating note: ${noteId} at fret position`);
         const note = createSvgElement('g', {
@@ -404,6 +472,15 @@ class Fretboard {
 
         // Debug: log the fret range
         // console.log(`Drawing notes from fret ${this.state.startFret} to ${this.state.endFret}`);
+
+        // Draw muted notes (always shown regardless of startFret)
+        for (let j = 0; j < this.consts.numStrings; j++) {
+            const mutedId = `muted-s${j}`;
+            if (mutedId in this.data && this.data[mutedId].type === 'muted') {
+                const mutedData = this.data[mutedId];
+                this.drawMutedNote(j, mutedData.color, mutedData.label);
+            }
+        }
 
         // open notes (fret: -1) - only draw if startFret is 0 or less
         if (this.state.startFret <= 0) {
@@ -687,14 +764,20 @@ if (svg && endFret) {
     // Convert user-supplied notes from 1-based to internal indexing:
     // - user fret 0 -> internal -1 (open string)
     // - user fret N>0 -> internal N-1
+    // - user fret 'X' -> keep as 'X' (muted string)
     // - user string 1 -> internal 0, etc.
     function convertUserNotes(notesArr) {
         return notesArr.map(n => {
             const out = Object.assign({}, n);
             if (out.hasOwnProperty('fret')) {
-                const fv = parseInt(out.fret);
-                if (!isNaN(fv)) {
-                    out.fret = (fv === 0) ? -1 : (fv - 1);
+                // Check if it's 'X' for muted strings
+                if (out.fret === 'X' || out.fret === 'x') {
+                    out.fret = 'X'; // normalize to uppercase
+                } else {
+                    const fv = parseInt(out.fret);
+                    if (!isNaN(fv)) {
+                        out.fret = (fv === 0) ? -1 : (fv - 1);
+                    }
                 }
             }
             if (out.hasOwnProperty('string')) {

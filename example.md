@@ -16,6 +16,7 @@ Here is a sample idea with an inline fretboard:
   "height": 270,
   "notes": [
     { "fret": 0, "string": 1, "color": "blue", "label": "R" },
+    { "fret": "X", "string": 2, "color": "red", "label": "" },
     { "fret": 7, "string": 1, "color": "blue", "label": "b3" }
   ]
 }
