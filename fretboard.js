@@ -138,10 +138,31 @@ class Fretboard {
         /**
          * Apply root note offset to all fret positions.
          * The offset shifts all frets relative to the original root note (A at index 5).
+         * If any note would become negative, shift the entire shape up by 12 frets (one octave).
          */
         if (Fretboard.rootNoteOffset === 0 || !notesArray) {
             return notesArray;
         }
+
+        // First pass: check if any notes would become negative
+        let hasNegativeFret = false;
+        for (let note of notesArray) {
+            if (note.fret === 'X' || note.fret === 'x' || note.fret === -1) {
+                continue;
+            }
+            if (typeof note.fret === 'number' && note.fret >= 0) {
+                if (note.fret + Fretboard.rootNoteOffset < 0) {
+                    hasNegativeFret = true;
+                    break;
+                }
+            }
+        }
+
+        // Determine the actual offset to apply (add octave if needed)
+        const actualOffset = hasNegativeFret ? Fretboard.rootNoteOffset + 12 : Fretboard.rootNoteOffset;
+
+        // Store whether we added an octave for fret window adjustment
+        this.octaveShift = hasNegativeFret ? 12 : 0;
 
         return notesArray.map(note => {
             const newNote = Object.assign({}, note);
@@ -151,7 +172,7 @@ class Fretboard {
             }
             // Apply offset to fretted notes
             if (typeof newNote.fret === 'number' && newNote.fret >= 0) {
-                newNote.fret = newNote.fret + Fretboard.rootNoteOffset;
+                newNote.fret = newNote.fret + actualOffset;
             }
             return newNote;
         });
@@ -781,9 +802,29 @@ class Fretboard {
                 continue;
             }
 
-            // Apply offset to fret window
-            inst.state.startFret = inst.originalStartFret + Fretboard.rootNoteOffset;
-            inst.state.endFret = inst.originalEndFret + Fretboard.rootNoteOffset;
+            // Reset octave shift before checking
+            inst.octaveShift = 0;
+
+            // Pre-check if we need octave shift by simulating the offset
+            if (inst.originalNotes && inst.originalNotes.length > 0) {
+                let needsOctaveShift = false;
+                for (let note of inst.originalNotes) {
+                    if (note.fret === 'X' || note.fret === 'x' || note.fret === -1) {
+                        continue;
+                    }
+                    if (typeof note.fret === 'number' && note.fret >= 0) {
+                        if (note.fret + Fretboard.rootNoteOffset < 0) {
+                            needsOctaveShift = true;
+                            break;
+                        }
+                    }
+                }
+                inst.octaveShift = needsOctaveShift ? 12 : 0;
+            }
+
+            // Apply offset to fret window (including octave shift if needed)
+            inst.state.startFret = inst.originalStartFret + Fretboard.rootNoteOffset + inst.octaveShift;
+            inst.state.endFret = inst.originalEndFret + Fretboard.rootNoteOffset + inst.octaveShift;
             inst.computeDependents();
 
             // Clear current data to force re-initialization with new offset
