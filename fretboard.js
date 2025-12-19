@@ -106,6 +106,9 @@ class Fretboard {
         if (typeof Fretboard.showLabels === 'undefined') {
             Fretboard.showLabels = false;
         }
+        if (typeof Fretboard.showAllNotes === 'undefined') {
+            Fretboard.showAllNotes = true; // default to showing all notes
+        }
 
         this.draw();
 
@@ -450,8 +453,22 @@ class Fretboard {
 
         note.appendChild(text);
 
-        const update = (noteId in this.data) ? this.data[noteId] : { type: 'note', color: 'white', visibility: this.state.visibility };
-        this.updateNote(note, update);
+        // Get or create the stored data for this note
+        const storedData = (noteId in this.data) ? this.data[noteId] : { type: 'note', color: 'white', visibility: this.state.visibility };
+
+        // Apply the stored data to the note (this also stores it in this.data)
+        this.updateNote(note, storedData);
+
+        // Now apply visibility override based on showAllNotes setting (without storing it)
+        if (!Fretboard.showAllNotes) {
+            // Only show notes that are explicitly colored (not white) OR explicitly set to visible
+            const isExplicitNote = (storedData.color && storedData.color !== 'white') || storedData.visibility === 'visible';
+            if (!isExplicitNote) {
+                // Apply visibility to the element class without storing it
+                const classValue = generateClassValue(note, { visibility: 'hidden' });
+                note.setAttribute('class', classValue);
+            }
+        }
     }
 
     computeNoteName(fret, string) {
@@ -638,7 +655,18 @@ class Fretboard {
             const stored = this.data[id] || {};
             const label = stored.label || null;
             const customText = (stored.noteText !== undefined) ? stored.noteText : null;
-            const text = customText ? customText : ((Fretboard.showLabels && label) ? label : baseNote);
+
+            let text;
+            if (customText) {
+                text = customText;
+            } else if (!Fretboard.showAllNotes) {
+                // When showAllNotes is disabled, only show labels (if showLabels is enabled)
+                text = (Fretboard.showLabels && label) ? label : '';
+            } else {
+                // Normal behavior: show labels if enabled, otherwise show note names
+                text = (Fretboard.showLabels && label) ? label : baseNote;
+            }
+
             if (noteElem) noteElem.innerHTML = text;
         }
     }
@@ -673,6 +701,27 @@ class Fretboard {
             inst.draw();
         }
         return sign;
+    }
+
+    static toggleShowAllNotes() {
+        Fretboard.showAllNotes = !Fretboard.showAllNotes;
+        Fretboard.instances = Fretboard.instances || [];
+        for (let inst of Fretboard.instances) {
+            inst.erase();
+            inst.draw();
+            inst.refreshNoteTexts();
+        }
+        return Fretboard.showAllNotes;
+    }
+
+    static setShowAllNotes(enable) {
+        Fretboard.showAllNotes = !!enable;
+        Fretboard.instances = Fretboard.instances || [];
+        for (let inst of Fretboard.instances) {
+            inst.erase();
+            inst.draw();
+            inst.refreshNoteTexts();
+        }
     }
 
     toggleVisibility() {

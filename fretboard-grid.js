@@ -432,5 +432,16 @@
             });
             enharmBtn.dataset.bound = '1';
         }
+
+        // show all notes toggle
+        const showAllNotesCheckbox = document.getElementById('toggle-all-notes');
+        if (showAllNotesCheckbox && !showAllNotesCheckbox.dataset.bound) {
+            showAllNotesCheckbox.addEventListener('change', () => {
+                if (typeof Fretboard !== 'undefined') {
+                    Fretboard.setShowAllNotes(showAllNotesCheckbox.checked);
+                }
+            });
+            showAllNotesCheckbox.dataset.bound = '1';
+        }
     }
 })();
