@@ -8,6 +8,7 @@
   "cols": 2,
   "width": 600,
   "height": 260,
+  "transposable": true,
   "items": [
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":  "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
@@ -27,7 +28,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 1, "color": "blue", "label": "M3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "A Ionian/ Major" },
+                                              ], "title": "Ionian/ Major" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":  "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
@@ -46,7 +47,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label": "b3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "A Dorian" },
+                                              ], "title": "Dorian" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 6, "string": 6, "color": "blue", "label": "b2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
@@ -65,7 +66,7 @@
                                                {"fret": 6, "string": 1, "color": "blue", "label": "b2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label": "b3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "A Phrygian" },
+                                              ], "title": "Phrygian" },
     { "startFret": 5, "endFret": 11, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 6, "color": "blue", "label": "M3" },
@@ -84,7 +85,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 1, "color": "blue", "label": "M3" },
                                                {"fret": 11, "string": 1, "color": "blue", "label":"A4" }
-                                              ], "title": "A Lydian" },
+                                              ], "title": "Lydian" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 6, "color": "blue", "label": "M3" },
@@ -103,7 +104,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 9, "string": 1, "color": "blue", "label": "M3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "D Mixolydian" },
+                                              ], "title": "Mixolydian" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
@@ -122,7 +123,7 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label": "b3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "D Aeolian/ Natural Minor" },
+                                              ], "title": "Aeolian/ Natural Minor" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                                {"fret": 6, "string": 6, "color": "blue", "label": "b2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label": "b3" },
@@ -141,7 +142,7 @@
                                                {"fret": 6, "string": 1, "color": "blue", "label": "b2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label": "b3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
-                                              ], "title": "D Locrian" },
+                                              ], "title": "Locrian" },
     null,
     null
   ]

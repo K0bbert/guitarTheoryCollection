@@ -109,6 +109,17 @@ class Fretboard {
         if (typeof Fretboard.showAllNotes === 'undefined') {
             Fretboard.showAllNotes = true; // default to showing all notes
         }
+        if (typeof Fretboard.rootNoteOffset === 'undefined') {
+            Fretboard.rootNoteOffset = 0; // default to A (no offset from A at index 5)
+        }
+
+        // Store original notes data and fret window before any offset is applied
+        this.originalNotes = null;
+        this.originalStartFret = this.state.startFret;
+        this.originalEndFret = this.state.endFret;
+
+        // Store transposable flag (default true for backward compatibility)
+        this.transposable = (typeof opts.transposable !== 'undefined') ? !!opts.transposable : true;
 
         this.draw();
 
@@ -121,6 +132,29 @@ class Fretboard {
     computeDependents() {
         this.state.numFrets = this.state.endFret - this.state.startFret;
         this.state.fretboardWidth = this.consts.fretWidth * this.state.numFrets;
+    }
+
+    applyRootOffset(notesArray) {
+        /**
+         * Apply root note offset to all fret positions.
+         * The offset shifts all frets relative to the original root note (A at index 5).
+         */
+        if (Fretboard.rootNoteOffset === 0 || !notesArray) {
+            return notesArray;
+        }
+
+        return notesArray.map(note => {
+            const newNote = Object.assign({}, note);
+            // Don't offset muted strings or open strings
+            if (newNote.fret === 'X' || newNote.fret === 'x' || newNote.fret === -1) {
+                return newNote;
+            }
+            // Apply offset to fretted notes
+            if (typeof newNote.fret === 'number' && newNote.fret >= 0) {
+                newNote.fret = newNote.fret + Fretboard.rootNoteOffset;
+            }
+            return newNote;
+        });
     }
 
     setInitialNotes(notesArray) {
@@ -137,7 +171,15 @@ class Fretboard {
          *   { fret: 'X', string: 5, color: 'blue' }   // muted string
          * ]
          */
-        for (let noteInfo of notesArray) {
+        // Store original notes if not already stored
+        if (!this.originalNotes) {
+            this.originalNotes = JSON.parse(JSON.stringify(notesArray));
+        }
+
+        // Apply root note offset to the notes
+        const offsetNotes = this.applyRootOffset(notesArray);
+
+        for (let noteInfo of offsetNotes) {
             const fret = noteInfo.fret;
             const string = noteInfo.string;
             const color = noteInfo.color || 'blue';
@@ -721,6 +763,38 @@ class Fretboard {
             inst.erase();
             inst.draw();
             inst.refreshNoteTexts();
+        }
+    }
+
+    static setRootNote(noteIndex) {
+        /**
+         * Set the root note by its index in the notes array.
+         * A is at index 5 (the default), so offset = noteIndex - 5
+         */
+        const aIndex = 5; // A is at index 5 in the notes array
+        Fretboard.rootNoteOffset = noteIndex - aIndex;
+
+        Fretboard.instances = Fretboard.instances || [];
+        for (let inst of Fretboard.instances) {
+            // Skip instances that are not transposable
+            if (!inst.transposable) {
+                continue;
+            }
+
+            // Apply offset to fret window
+            inst.state.startFret = inst.originalStartFret + Fretboard.rootNoteOffset;
+            inst.state.endFret = inst.originalEndFret + Fretboard.rootNoteOffset;
+            inst.computeDependents();
+
+            // Clear current data to force re-initialization with new offset
+            inst.data = {};
+            inst.erase();
+            inst.draw();
+
+            // Re-apply original notes with new offset
+            if (inst.originalNotes && inst.originalNotes.length > 0) {
+                inst.setInitialNotes(inst.originalNotes);
+            }
         }
     }
 

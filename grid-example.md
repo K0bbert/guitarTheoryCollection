@@ -9,6 +9,7 @@ This example shows a 3x3 grid of fretboards. Each cell can have per-item overrid
   "cols": 3,
   "width": 600,
   "height": 260,
+  "transposable": false,
   "items": [
     { "startFret": 1, "endFret": 5, "notes": [{"fret": 1, "string": 1, "color": "blue", "label": "R"}], "title": "C Major" },
     { "startFret": 3, "endFret": 7, "notes": [{"fret": 3, "string": 1, "color": "green", "label": "3"}], "title": "D Minor" },

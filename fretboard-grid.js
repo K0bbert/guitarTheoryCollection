@@ -80,6 +80,7 @@
             if (typeof startFretInternal !== 'undefined') fbOpts.startFret = startFretInternal;
             if (typeof endFretInternal !== 'undefined') fbOpts.endFret = endFretInternal;
             if (notesInternal) fbOpts.notes = notesInternal;
+            if (cfg.hasOwnProperty('transposable')) fbOpts.transposable = !!cfg.transposable;
             try {
                 new Fretboard(fbOpts);
             } catch (e) {
@@ -149,7 +150,19 @@
                             inp.value = String(item.title);
                             container.appendChild(inp);
                         }
+                        if (item.transposable !== undefined) {
+                            const inp = document.createElement('input');
+                            inp.type = 'hidden';
+                            inp.id = `${baseId}-fb-${idx}-transposable`;
+                            inp.value = String(item.transposable);
+                            container.appendChild(inp);
+                        }
                     }
+                }
+
+                // Store grid-level transposable attribute if present
+                if (cfg.transposable !== undefined) {
+                    container.dataset.transposable = String(cfg.transposable);
                 }
 
                 // replace the code block with the container
@@ -328,6 +341,7 @@
                 const endInput = document.getElementById(`${baseId}-fb-${i}-end-fret`);
                 const notesInput = document.getElementById(`${baseId}-fb-${i}-notes`);
                 const titleInput = document.getElementById(`${baseId}-fb-${i}-title`);
+                const transposableInput = document.getElementById(`${baseId}-fb-${i}-transposable`);
                 const labelEl = document.getElementById(`${baseId}-fb-${i}-label`);
 
                 // Set label text if title input exists
@@ -384,12 +398,21 @@
                 // Visible log: show which values we'll pass to the constructor
                 console.log(`Initializing ${baseId}-fb-${i}: start=${startArg} end=${endArg} notes=${JSON.stringify(notesArg)}`);
 
+                // Determine transposable: check item-level first, then grid-level, default to true
+                let transposableArg = true;
+                if (transposableInput && transposableInput.value) {
+                    transposableArg = transposableInput.value === 'true';
+                } else if (container.dataset.transposable) {
+                    transposableArg = container.dataset.transposable === 'true';
+                }
+
                 const fb = new Fretboard({
                     svg: svgEl,
                     startFret: startArg,
                     endFret: endArg,
                     enharmonic: { value: 0 },
-                    notes: notesArg
+                    notes: notesArg,
+                    transposable: transposableArg
                 });
                 fretboards.push(fb);
             }
@@ -442,6 +465,18 @@
                 }
             });
             showAllNotesCheckbox.dataset.bound = '1';
+        }
+
+        // root note selector
+        const rootNoteSelect = document.getElementById('root-note-select');
+        if (rootNoteSelect && !rootNoteSelect.dataset.bound) {
+            rootNoteSelect.addEventListener('change', () => {
+                if (typeof Fretboard !== 'undefined') {
+                    const noteIndex = parseInt(rootNoteSelect.value);
+                    Fretboard.setRootNote(noteIndex);
+                }
+            });
+            rootNoteSelect.dataset.bound = '1';
         }
     }
 })();

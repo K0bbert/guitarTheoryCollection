@@ -14,6 +14,7 @@ Here is a sample idea with an inline fretboard:
   "endFret": 10,
   "width": 750,
   "height": 270,
+  "transposable": false,
   "notes": [
     { "fret": 0, "string": 1, "color": "blue", "label": "R" },
     { "fret": "X", "string": 2, "color": "red", "label": "" },

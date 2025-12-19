@@ -7,6 +7,7 @@
   "cols": 3,
   "width": 600,
   "height": 260,
+  "transposable": true,
   "colTitles": ["7", "m7", "m7b5"],
   "items": [
     { "startFret": 3, "endFret": 7, "notes": [
