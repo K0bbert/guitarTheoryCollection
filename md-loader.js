@@ -18,7 +18,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.marked) html = marked.parse(text);
             else html = '<p>' + text.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br/>') + '</p>';
             node.innerHTML = html;
-            node.style.display = '';
+            // Only show header.md by default, keep others hidden
+            if (path === 'header.md') {
+                node.style.display = 'block';
+            } else {
+                node.style.display = 'none';
+            }
             // initialize any embedded fretboards within this node
             if (window.initFretboardEmbeds) {
                 try { window.initFretboardEmbeds(node); } catch (e) { console.error(e); }
