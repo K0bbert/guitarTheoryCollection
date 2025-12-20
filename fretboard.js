@@ -121,6 +121,9 @@ class Fretboard {
         // Store transposable flag (default true for backward compatibility)
         this.transposable = (typeof opts.transposable !== 'undefined') ? !!opts.transposable : true;
 
+        // Track if this fretboard has ever been transposed (for octave shift logic)
+        this.hasBeenTransposed = false;
+
         this.draw();
 
         // Initialize with notes if provided in options
@@ -139,15 +142,23 @@ class Fretboard {
          * Apply root note offset to all fret positions.
          * The offset shifts all frets relative to the original root note (A at index 5).
          * If any note would become negative, shift the entire shape up by 12 frets (one octave).
-         * If any note would be >= 18, shift the entire shape down by 12 frets (one octave).
+         * If any note would be > 16, shift the entire shape down by 12 frets (one octave).
+         *
+         * On initial page load, no octave shifting is applied.
+         * Once a transpose has occurred, octave shifting is always applied (even when returning to A).
          */
-        if (Fretboard.rootNoteOffset === 0 || !notesArray) {
-            // Reset octave shift when no offset is applied
+        if (!notesArray) {
             this.octaveShift = 0;
             return notesArray;
         }
 
-        // First pass: check if any notes would become negative or >= 18
+        // On initial load (never transposed), don't apply any octave shifting
+        if (!this.hasBeenTransposed && Fretboard.rootNoteOffset === 0) {
+            this.octaveShift = 0;
+            return notesArray;
+        }
+
+        // Check if octave shift is needed
         let hasNegativeFret = false;
         let hasTooHighFret = false;
         for (let note of notesArray) {
@@ -177,6 +188,11 @@ class Fretboard {
 
         // Store the octave shift for fret window adjustment
         this.octaveShift = octaveAdjustment;
+
+        // If no offset needed at all, return original array
+        if (actualOffset === 0) {
+            return notesArray;
+        }
 
         return notesArray.map(note => {
             const newNote = Object.assign({}, note);
@@ -815,6 +831,9 @@ class Fretboard {
             if (!inst.transposable) {
                 continue;
             }
+
+            // Mark this instance as having been transposed
+            inst.hasBeenTransposed = true;
 
             // Reset octave shift before checking
             inst.octaveShift = 0;
