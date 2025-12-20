@@ -8,8 +8,8 @@
     // fretboards. The helper `initFretboardEmbeds` is defined below and
     // exposed on `window` for the markdown loader to call after rendering.
 
-    // Convert user-supplied notes and indices from 1-based to internal indices
-    // user: fret 0 -> internal -1, fret N>0 -> N-1, fret 'X' -> 'X' (muted); string 1 -> 0
+    // Convert user-supplied notes: fret 0 -> -1 (open), fret N>0 -> N-1 (0-based internal)
+    // String numbers: 1-6 (user) -> 0-5 (internal array index)
     function convertUserNotes(notesArr) {
         return notesArr.map(n => {
             const out = Object.assign({}, n);
@@ -363,7 +363,8 @@
                     labelEl.textContent = titleInput.value;
                 }
 
-                // Determine startFret: convert user-facing 1-based to 0-based internal value
+                // Determine startFret: convert user-facing 1-based fret numbers to 0-based internal
+                // User fret 1 (first fret on guitar) -> internal 0
                 let startArg = { value: 0 };
                 if (startInput && startInput.value) {
                     const v = parseInt(startInput.value);
@@ -372,7 +373,8 @@
                     }
                 }
 
-                // Determine endFret: numeric value if provided, otherwise default object
+                // Determine endFret: this is the exclusive upper bound, so don't subtract
+                // User wants to see up to fret N, loop goes < endFret
                 let endArg = { value: 4 };
                 if (endInput && endInput.value) {
                     const v = parseInt(endInput.value);
@@ -385,7 +387,7 @@
                     try {
                         const parsed = JSON.parse(notesInput.value);
                         if (Array.isArray(parsed)) {
-                            // convert user-supplied 1-based note fields to internal indices
+                            // convert user-supplied note fields: fret 0 -> -1 (open), fret N>0 -> N-1, strings 1-6 -> 0-5
                             notesArg = parsed.map(n => {
                                 const out = Object.assign({}, n);
                                 if (out.hasOwnProperty('fret')) {

@@ -142,6 +142,8 @@ class Fretboard {
          * If any note would be >= 18, shift the entire shape down by 12 frets (one octave).
          */
         if (Fretboard.rootNoteOffset === 0 || !notesArray) {
+            // Reset octave shift when no offset is applied
+            this.octaveShift = 0;
             return notesArray;
         }
 
@@ -157,7 +159,7 @@ class Fretboard {
                 if (newFret < 0) {
                     hasNegativeFret = true;
                 }
-                if (newFret >= 17) {
+                if (newFret > 16) {
                     hasTooHighFret = true;
                 }
             }
@@ -830,7 +832,7 @@ class Fretboard {
                         if (newFret < 0) {
                             hasNegativeFret = true;
                         }
-                        if (newFret >= 17) {
+                        if (newFret > 16) {
                             hasTooHighFret = true;
                         }
                     }
@@ -848,6 +850,20 @@ class Fretboard {
             // Apply offset to fret window (including octave shift if needed)
             inst.state.startFret = inst.originalStartFret + Fretboard.rootNoteOffset + inst.octaveShift;
             inst.state.endFret = inst.originalEndFret + Fretboard.rootNoteOffset + inst.octaveShift;
+
+            // Clamp fret window to valid range (0-22)
+            // Ensure startFret doesn't go below 0 (which would trigger open string display)
+            if (inst.state.startFret < 0) {
+                const adjustment = -inst.state.startFret;
+                inst.state.startFret = 0;
+                inst.state.endFret += adjustment;
+            }
+            if (inst.state.endFret > 22) {
+                const adjustment = inst.state.endFret - 22;
+                inst.state.endFret = 22;
+                inst.state.startFret = Math.max(0, inst.state.startFret - adjustment);
+            }
+
             inst.computeDependents();
 
             // Clear current data to force re-initialization with new offset
