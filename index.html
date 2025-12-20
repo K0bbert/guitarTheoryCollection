@@ -123,23 +123,20 @@
       <li><a href="#" data-page="grid-example.md">Grid Example</a></li>
       <li><a href="#" data-page="footer.md">Footer</a></li>
     </ul>
-  </nav>
 
-  <!-- Overlay -->
-  <div class="burger-overlay" id="burger-overlay"></div>
-
-  <div class="hub">
-      <!-- Toogle buttons -->
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px; margin-top:70px; padding:12px; background:white; border:1px solid #ccc; border-radius:4px;">
-        <button id="toggle-labels" class="label-toggle-button" style="padding:8px 12px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">Show Labels</button>
-        <button id="toggle-enharmonic" class="label-toggle-button" style="padding:8px 12px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">♭</button>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; background:white; border:1px solid #ccc; border-radius:4px;">
+    <!-- Controls Section -->
+    <div style="padding: 20px; border-top: 2px solid #eee; margin-top: 10px;">
+      <h4 style="margin: 0 0 12px 0; color: #666; font-size: 13px; text-transform: uppercase;">Controls</h4>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button id="toggle-labels" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">Show Labels</button>
+        <button id="toggle-enharmonic" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">♭</button>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:#f9f9f9; border-radius:4px;">
           <input type="checkbox" id="toggle-all-notes" checked style="cursor:pointer;">
           <span>Show All Notes</span>
         </label>
-        <label style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:white; border:1px solid #ccc; border-radius:4px;">
-          <span>Root Note:</span>
-          <select id="root-note-select" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px; background:white; cursor:pointer;">
+        <label style="display:flex; flex-direction:column; gap:6px; padding:10px; background:#f9f9f9; border-radius:4px;">
+          <span style="font-weight:600; font-size:12px;">Root Note:</span>
+          <select id="root-note-select" style="padding:8px; border:1px solid #ccc; border-radius:4px; background:white; cursor:pointer; width:100%;">
             <option value="0">E</option>
             <option value="1">F</option>
             <option value="2">F#/Gb</option>
@@ -155,7 +152,13 @@
           </select>
         </label>
       </div>
+    </div>
+  </nav>
 
+  <!-- Overlay -->
+  <div class="burger-overlay" id="burger-overlay"></div>
+
+  <div class="hub">
       <div id="md-intervals" class="md-content" data-md="intervals.md" style="display:none; margin-top:18px;"></div>
       <div id="md-pentatonic" class="md-content" data-md="pentatonic.md" style="display:none; margin-top:18px;"></div>
       <div id="md-modes" class="md-content" data-md="modes.md" style="display:none; margin-top:18px;"></div>
