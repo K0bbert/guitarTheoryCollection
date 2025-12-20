@@ -348,3 +348,64 @@
                                              ], "title": "" }
   ]
 }
+```
+
+## Minor/ Major Inversions
+
+```fretboard-grid
+{
+  "id": "chord-grid-4",
+  "rows": 3,
+  "cols": 2,
+  "colTitles": ["Major", "Minor"],
+  "width": 600,
+  "height": 260,
+  "transposable": true,
+  "items": [
+    { "startFret": 12, "endFret": 14, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 14, "string": 3, "color": "red", "label": "R"},
+                                              {"fret": 14, "string": 2, "color": "blue", "label": "M3"},
+                                              {"fret": 12, "string": 1, "color": "blue", "label": "P5"}
+                                             ], "title": "" },
+    { "startFret": 12, "endFret": 14, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 14, "string": 3, "color": "red", "label": "R"},
+                                              {"fret": 13, "string": 2, "color": "blue", "label": "m3"},
+                                              {"fret": 12, "string": 1, "color": "blue", "label": "P5"}
+                                             ], "title": "" },
+
+    { "startFret": 8, "endFret": 10, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "x", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 9, "string": 3, "color": "blue", "label": "P5"},
+                                              {"fret": 10, "string": 2, "color": "red", "label": "R"},
+                                              {"fret": 9, "string": 1, "color": "blue", "label": "M3"}
+                                             ], "title": "" },
+    { "startFret": 8, "endFret": 10, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "x", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 9, "string": 3, "color": "blue", "label": "P5"},
+                                              {"fret": 10, "string": 2, "color": "red", "label": "R"},
+                                              {"fret": 8, "string": 1, "color": "blue", "label": "m3"}
+                                             ], "title": "" },
+
+    { "startFret": 4, "endFret": 7, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 6, "string": 3, "color": "blue", "label": "M3"},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
+                                              {"fret": 5, "string": 1, "color": "red", "label": "R"}
+                                             ], "title": "" },
+    { "startFret": 4, "endFret": 7, "notes": [{"fret": "x", "string": 6, "color": "red", "label": ""},
+                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
+                                              {"fret": "x", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 5, "string": 3, "color": "blue", "label": "m3"},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
+                                              {"fret": 5, "string": 1, "color": "red", "label": "R"}
+                                             ], "title": "" }
+  ]
+}
+```
