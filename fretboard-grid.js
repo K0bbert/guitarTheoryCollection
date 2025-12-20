@@ -121,7 +121,15 @@
                     for (let i = 0; i < cfg.items.length && i < total; i++) {
                         const item = cfg.items[i];
                         const idx = i + 1;
-                        if (!item) continue;
+                        if (!item) {
+                            // Mark this position as null/empty so it won't be rendered
+                            const inp = document.createElement('input');
+                            inp.type = 'hidden';
+                            inp.id = `${baseId}-fb-${idx}-null`;
+                            inp.value = 'true';
+                            container.appendChild(inp);
+                            continue;
+                        }
                         if (item.startFret !== undefined) {
                             const inp = document.createElement('input');
                             inp.type = 'hidden';
@@ -299,6 +307,12 @@
             // grid positions (offset by header rows/cols), otherwise just append
             const hasHeaders = !!(colTitles || rowTitles);
             for (let i = 1; i <= total; i++) {
+                // Check if this item is marked as null - if so, skip creating it
+                const nullMarker = document.getElementById(`${baseId}-fb-${i}-null`);
+                if (nullMarker && nullMarker.value === 'true') {
+                    continue;
+                }
+
                 const fretboardItem = document.createElement('div');
                 fretboardItem.className = 'fretboard-item';
 
