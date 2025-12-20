@@ -295,3 +295,56 @@
                                              ], "title": "" }
   ]
 }
+```
+
+## sus2/ sus4/ sus9
+
+```fretboard-grid
+{
+  "id": "chord-grid-3",
+  "rows": 2,
+  "cols": 3,
+  "colTitles": ["sus2", "sus4", "sus9"],
+  "width": 600,
+  "height": 260,
+  "transposable": true,
+  "items": [
+    { "startFret": 12, "endFret": 14, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": "R"},
+                                              {"fret": 14, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 12, "endFret": 15, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": "R"},
+                                              {"fret": 14, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 14, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 15, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" },
+    { "startFret": 3, "endFret": 5, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
+                                              {"fret": "x", "string": 5, "color": "red", "label": ""},
+                                              {"fret": 5, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 4, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 3, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": "x", "string": 1, "color": "red", "label": ""}
+                                             ], "title": "" },
+
+    null,
+    { "startFret": 5, "endFret": 7, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
+                                              {"fret": 7, "string": 5, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 4, "color": "blue", "label": ""},
+                                              {"fret": 7, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 1, "color": "red", "label": "R"}
+                                             ], "title": "" },
+    { "startFret": 10, "endFret": 12, "notes": [{"fret": "x", "string": 6, "color": "red", "label": ""},
+                                              {"fret": 12, "string": 5, "color": "red", "label": "R"},
+                                              {"fret": "x", "string": 4, "color": "red", "label": ""},
+                                              {"fret": 12, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 12, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 10, "string": 1, "color": "blue", "label": ""}
+                                             ], "title": "" }
+  ]
+}
