@@ -73,17 +73,41 @@
 
     /**
      * Transforms a single fretboard grid item from Ionian to the target mode
-     * This adjusts BOTH the interval labels AND the fret positions
+     * This adjusts BOTH the interval labels AND the fret positions AND the title
      * @param {Object} item - The grid item with notes array
      * @param {string} targetMode - The target mode name
+     * @param {number} shapeIndex - The index of this shape (0-6)
      * @returns {Object} A new item with transformed notes (both labels and fret positions)
      */
-    function transformItemToMode(item, targetMode) {
+    function transformItemToMode(item, targetMode, shapeIndex) {
         if (!item || !item.notes) return item;
-        if (targetMode === 'Ionian') return item; // No transformation needed
+        if (targetMode === 'Ionian' && shapeIndex === undefined) return item; // No transformation needed
 
         // Deep copy the item
         const newItem = JSON.parse(JSON.stringify(item));
+
+        // Update the title if we're not in Ionian mode
+        if (shapeIndex !== undefined) {
+            const modeNames = ['Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian'];
+            const targetModeIndex = modeNames.indexOf(targetMode);
+
+            if (targetModeIndex !== -1) {
+                // The shape pattern stays the same, but we need to show what mode it's actually playing
+                // Shape 0 (originally "Ionian Shape") when playing Dorian becomes "Dorian Shape"
+                // Shape 1 (originally "Dorian Shape") when playing Dorian becomes "Phrygian Shape"
+                const actualModeIndex = (targetModeIndex + shapeIndex) % 7;
+                const actualModeName = modeNames[actualModeIndex];
+
+                // Update the title
+                if (actualModeName === 'Ionian') {
+                    newItem.title = 'Ionian/ Major Shape';
+                } else if (actualModeName === 'Aeolian') {
+                    newItem.title = 'Aeolian/ Natural Minor Shape';
+                } else {
+                    newItem.title = `${actualModeName} Shape`;
+                }
+            }
+        }
 
         // Transform each note's label AND fret position
         newItem.notes = newItem.notes.map(note => {
@@ -128,8 +152,8 @@
         // Create a new grid configuration
         const newGrid = {
             ...originalGrid,
-            items: originalGrid.items.map(item =>
-                transformItemToMode(item, selectedMode)
+            items: originalGrid.items.map((item, index) =>
+                transformItemToMode(item, selectedMode, index)
             )
         };
 
@@ -158,17 +182,30 @@
         const newGridConfig = generateModeGrid(selectedMode, originalGridConfig);
         console.log(`[ModeTransformer] Generated config for ${selectedMode} with ${newGridConfig.items?.length || 0} items`);
 
-        // Update all the hidden inputs with new note data
+        // Update all the hidden inputs with new note data AND titles
         const total = newGridConfig.items ? newGridConfig.items.length : 0;
 
         for (let i = 0; i < total; i++) {
             const item = newGridConfig.items[i];
             const idx = i + 1;
             const notesInput = document.getElementById(`${gridId}-fb-${idx}-notes`);
+            const titleInput = document.getElementById(`${gridId}-fb-${idx}-title`);
+            const labelEl = document.getElementById(`${gridId}-fb-${idx}-label`);
 
             if (notesInput && item && item.notes) {
                 // Update the notes JSON
                 notesInput.value = JSON.stringify(item.notes);
+            }
+
+            if (item && item.title) {
+                // Update the title in hidden input
+                if (titleInput) {
+                    titleInput.value = item.title;
+                }
+                // Update the visible label
+                if (labelEl) {
+                    labelEl.textContent = item.title;
+                }
             }
         }
 
@@ -295,7 +332,13 @@
 
         // Add change event listener
         select.addEventListener('change', function() {
-            updateGridWithMode(gridId, this.value, originalGridConfig);
+            console.log(`[ModeTransformer] Dropdown changed to: ${this.value}`);
+            console.log(`[ModeTransformer] Original config:`, originalGridConfig);
+            try {
+                updateGridWithMode(gridId, this.value, originalGridConfig);
+            } catch (e) {
+                console.error(`[ModeTransformer] Error in updateGridWithMode:`, e);
+            }
         });
 
         label.appendChild(select);
