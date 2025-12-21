@@ -1,7 +1,5 @@
 # Modal Interval Analysis
 
-# **DISCLAIMER: THIS IS A WIP AND THE CONTENT SHOULD NOT BE USED AS IT IS NOT CORRECT YET**
-
 <style>
 table {
   border-collapse: collapse;
@@ -35,15 +33,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - M2 - M3 - P4 - P5 - M6 - M7
 **Example:** C D E F G A B
 
-| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----------|---------------|----|----|----|----|----|
-| **I**   |    | x  |    | M3       | P4            | x  |    | x  |    | x  |
-| **II**  |    | x  | x  |          | P4            | x  |    | x  | x  |    |
-| **III** | x  |    | x  |          | P4            | x  | x  |    | x  |    |
-| **IV**  |    | x  |    | M3       | P4            | x  |    | x  |    | x  |
-| **V**   |    | x  |    | M3       | P4            | x  |    | x  | x  |    |
-| **VI**  |    | x  | x  |          | P4            | x  | x  |    | x  |    |
-| **VII** | x  |    | x  | Dim4     | Dim5          |    | x  |    | x  |    |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **II**  |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **III** | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **IV**  |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **V**   |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **VI**  |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **VII** | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
 
 ---
 
@@ -51,15 +49,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - M2 - m3 - P4 - P5 - M6 - m7
 **Example:** D E F G A B C
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   |    | x  | x  |    | x  |       | x  |    | x  | x  |    |
-| **II**  | x  |    | x  |    | x  |       | x  | x  |    | x  |    |
-| **III** |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
-| **IV**  |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **V**   |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **VI**  | x  |    | x  |    | x  | x     |    | x  |    | x  |    |
-| **VII** |    | x  |    | x  | x  |       | x  |    | x  |    | x  |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **II**  | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **III** |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **IV**  |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **V**   |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **VI**  | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **VII** |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
 
 ---
 
@@ -67,15 +65,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - m2 - m3 - P4 - P5 - m6 - m7
 **Example:** E F G A B C D
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   | x  |    | x  |    | x  |       | x  | x  |    | x  |    |
-| **II**  |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
-| **III** |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **IV**  |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **V**   | x  |    | x  |    | x  | x     |    | x  |    | x  |    |
-| **VI**  |    | x  |    | x  | x  |       | x  |    | x  |    | x  |
-| **VII** |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **II**  |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **III** |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **IV**  |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **V**   | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **VI**  |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **VII** |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
 
 ---
 
@@ -83,15 +81,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - M2 - M3 - TT - P5 - M6 - M7
 **Example:** F G A B C D E
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
-| **II**  |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **III** |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **IV**  | x  |    | x  |    | x  |       |    | x  |    | x  |    |
-| **V**   |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **VI**  |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **VII** | x  |    | x  |    | x  |       | x  | x  |    | x  |    |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **II**  |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **III** |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **IV**  | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **V**   |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **VI**  |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **VII** | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
 
 ---
 
@@ -99,15 +97,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - M2 - M3 - P4 - P5 - M6 - m7
 **Example:** G A B C D E F
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **II**  |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **III** | x  |    | x  |    | x  |       |    | x  |    | x  |    |
-| **IV**  |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **V**   |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **VI**  | x  |    | x  |    | x  |       |    | x  |    | x  |    |
-| **VII** |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **II**  |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **III** | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **IV**  |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **V**   |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **VI**  | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **VII** |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
 
 ---
 
@@ -115,15 +113,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - M2 - m3 - P4 - P5 - m6 - m7
 **Example:** A B C D E F G
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **II**  | x  |    | x  |    | x  | x     |    | x  |    | x  |    |
-| **III** |    | x  |    | x  | x  |       | x  |    | x  |    | x  |
-| **IV**  |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **V**   | x  |    | x  |    | x  |       | x  | x  |    | x  |    |
-| **VI**  |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
-| **VII** |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **II**  | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **III** |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **IV**  |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **V**   | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **VI**  |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **VII** |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
 
 ---
 
@@ -131,15 +129,15 @@ This document analyzes which intervals are available from each scale degree in e
 **Formula:** R - m2 - m3 - P4 - d5 - m6 - m7
 **Example:** B C D E F G A
 
-| Degree  | m2 | M2 | m3 | M3 | P4 | TT/d5 | P5 | m6 | M6 | m7 | M7 |
-|---------|----|----|----|----|----|-------|----|----|----|----|----|
-| **I**   | x  |    | x  |    | x  | x     |    | x  |    | x  |    |
-| **II**  |    | x  |    | x  | x  |       | x  |    | x  |    | x  |
-| **III** |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
-| **IV**  | x  |    | x  |    | x  |       | x  | x  |    | x  |    |
-| **V**   |    | x  |    | x  |    | x     | x  |    | x  |    | x  |
-| **VI**  |    | x  |    | x  | x  |       | x  |    | x  | x  |    |
-| **VII** |    | x  | x  |    | x  |       | x  | x  |    | x  |    |
+| Degree  | m2 | M2 | m3 | M3/ Dim4 | P4 | Aug4/ Dim5 (TT) | P5 | m6 | M6 | m7 | M7 |
+|---------|----|----|----|----------|----|-----------------|----|----|----|----|----|
+| **I**   | x  |    | x  | Dim4     |    | Dim5            |    | x  |    | x  |    |
+| **II**  |    | x  |    | M3       | P4 |                 | x  |    | x  |    | x  |
+| **III** |    | x  | x  |          | P4 |                 | x  |    | x  | x  |    |
+| **IV**  | x  |    | x  |          | P4 |                 | x  | x  |    | x  |    |
+| **V**   |    | x  |    | M3       |    | Aug4            | x  |    | x  |    | x  |
+| **VI**  |    | x  |    | M3       | P4 |                 | x  |    | x  | x  |    |
+| **VII** |    | x  | x  |          | P4 |                 | x  | x  |    | x  |    |
 
 ---
 
