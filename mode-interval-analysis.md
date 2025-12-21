@@ -1,5 +1,34 @@
 # Modal Interval Analysis
 
+# **DISCLAIMER: THIS IS A WIP AND THE CONTENT SHOULD NOT BE USED AS IT IS NOT CORRECT YET**
+
+<style>
+table {
+  border-collapse: collapse;
+  width: 70%;
+  margin: 20px 0;
+}
+
+table th, table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+table tr:hover {
+  background-color: #f5f5f5;
+}
+</style>
+
 This document analyzes which intervals are available from each scale degree in each of the seven church modes.
 
 ## Ionian Mode (Major Scale)
