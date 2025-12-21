@@ -455,12 +455,12 @@
         const toggleBtn = document.getElementById('toggle-labels');
         if (toggleBtn && !toggleBtn.dataset.bound) {
             try {
-                toggleBtn.textContent = (typeof Fretboard !== 'undefined' && Fretboard.showLabels) ? 'Hide Labels' : 'Show Labels';
+                toggleBtn.textContent = (typeof Fretboard !== 'undefined' && Fretboard.showLabels) ? 'Notes' : 'Intervals';
             } catch (e) {}
             toggleBtn.addEventListener('click', () => {
                 if (typeof Fretboard !== 'undefined') {
                     const shown = Fretboard.toggleShowLabels();
-                    toggleBtn.textContent = shown ? 'Hide Labels' : 'Show Labels';
+                    toggleBtn.textContent = shown ? 'Notes' : 'Intervals';
                 }
             });
             toggleBtn.dataset.bound = '1';
