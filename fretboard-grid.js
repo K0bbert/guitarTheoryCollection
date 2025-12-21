@@ -8,6 +8,9 @@
     // fretboards. The helper `initFretboardEmbeds` is defined below and
     // exposed on `window` for the markdown loader to call after rendering.
 
+    // Store original grid configurations for mode transformation
+    window.fretboardGridConfigs = window.fretboardGridConfigs || {};
+
     // Convert user-supplied notes: fret 0 -> -1 (open), fret N>0 -> N-1 (0-based internal)
     // String numbers: 1-6 (user) -> 0-5 (internal array index)
     function convertUserNotes(notesArr) {
@@ -106,6 +109,9 @@
                 const cols = cfg.cols || 3;
                 const total = cfg.total || (rows * cols);
                 const baseId = cfg.id || `fretboard-grid-${Math.floor(Math.random()*100000)}`;
+
+                // Store the original configuration for later use (e.g., mode transformation)
+                window.fretboardGridConfigs[baseId] = JSON.parse(JSON.stringify(cfg));
 
                 const container = document.createElement('div');
                 container.className = 'fretboard-grid';

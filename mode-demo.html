@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode Transformer Demo</title>
+    <link rel="stylesheet" href="fretboard.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .demo-info {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .demo-info h2 {
+            margin-top: 0;
+        }
+        .demo-info ul {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Church Mode Transformer Demo</h1>
+
+    <div class="demo-info">
+        <h2>How it works:</h2>
+        <ul>
+            <li><strong>Select a mode</strong> from the dropdown below</li>
+            <li>The fretboard diagram will update to show that mode across the entire neck</li>
+            <li>All interval labels will transform accordingly (e.g., Dorian uses R, M2, b3, P4, P5, M6, b7)</li>
+            <li>The shapes remain in the same positions but display different intervals</li>
+            <li>You can also use the root note selector to transpose the entire grid</li>
+        </ul>
+    </div>
+
+    <!-- This container will be populated by JavaScript -->
+    <div id="church-modes-grid-2" class="fretboard-grid"></div>
+
+    <script src="fretboard.js"></script>
+    <script src="fretboard-grid.js"></script>
+    <script src="mode-transformer.js"></script>
+    <script>
+        console.log('[Demo] Scripts loaded');
+        console.log('[Demo] Fretboard available:', typeof Fretboard);
+        console.log('[Demo] initFretboardGrids available:', typeof initFretboardGrids);
+        console.log('[Demo] ModeTransformer available:', typeof ModeTransformer);
+        
+        // Define the church-modes-grid-2 configuration
+        const churchModesGrid2Config = {
+            "id": "church-modes-grid-2",
+            "rows": 7,
+            "cols": 1,
+            "width": 600,
+            "height": 260,
+            "transposable": true,
+            "items": [
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 5, "string": 6, "color": "red", "label":  "R"},
+                                                           {"fret": 7, "string": 6, "color": "blue", "label": "M2" },
+                                                           {"fret": 9, "string": 6, "color": "blue", "label": "M3" },
+                                                           {"fret": 5, "string": 5, "color": "blue", "label": "P4" },
+                                                           {"fret": 7, "string": 5, "color": "blue", "label": "P5" },
+                                                           {"fret": 9, "string": 5, "color": "blue", "label": "M6" },
+                                                           {"fret": 6, "string": 4, "color": "blue", "label": "M7" },
+                                                           {"fret": 7, "string": 4, "color": "red", "label":  "R" },
+                                                           {"fret": 9, "string": 4, "color": "blue", "label": "M2" },
+                                                           {"fret": 6, "string": 3, "color": "blue", "label": "M3" },
+                                                           {"fret": 7, "string": 3, "color": "blue", "label": "P4" },
+                                                           {"fret": 9, "string": 3, "color": "blue", "label": "P5" },
+                                                           {"fret": 7, "string": 2, "color": "blue", "label": "M6" },
+                                                           {"fret": 9, "string": 2, "color": "blue", "label": "M7" },
+                                                           {"fret": 10, "string": 2, "color": "red", "label": "R" },
+                                                           {"fret": 7, "string": 1, "color": "blue", "label": "M2" },
+                                                           {"fret": 9, "string": 1, "color": "blue", "label": "M3" },
+                                                           {"fret": 10, "string": 1, "color": "blue", "label":"P4" }
+                                                          ], "title": "Ionian/ Major Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
+                                                           {"fret": 9, "string": 6, "color": "blue", "label":  "M3" },
+                                                           {"fret": 10, "string": 6, "color": "blue", "label": "P4" },
+                                                           {"fret": 7, "string": 5, "color": "blue", "label":  "P5" },
+                                                           {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
+                                                           {"fret": 11, "string": 5, "color": "blue", "label": "M7" },
+                                                           {"fret": 7, "string": 4, "color": "red", "label":   "R"},
+                                                           {"fret": 9, "string": 4, "color": "blue", "label":  "M2" },
+                                                           {"fret": 11, "string": 4, "color": "blue", "label": "M3" },
+                                                           {"fret": 7, "string": 3, "color": "blue", "label":  "P4" },
+                                                           {"fret": 9, "string": 3, "color": "blue", "label":  "P5" },
+                                                           {"fret": 11, "string": 3, "color": "blue", "label": "M6" },
+                                                           {"fret": 9, "string": 2, "color": "blue", "label":  "M7" },
+                                                           {"fret": 10, "string": 2, "color": "red", "label":  "R"},
+                                                           {"fret": 12, "string": 2, "color": "blue", "label": "M2" },
+                                                           {"fret": 9, "string": 1, "color": "blue", "label":  "M3" },
+                                                           {"fret": 10, "string": 1, "color": "blue", "label": "P4" },
+                                                           {"fret": 12, "string": 1, "color": "blue", "label": "P5" }
+                                                          ], "title": "Dorian Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 9, "string": 6, "color": "blue", "label":  "M3" },
+                                                           {"fret": 10, "string": 6, "color": "blue", "label": "P4" },
+                                                           {"fret": 12, "string": 6, "color": "blue", "label": "P5" },
+                                                           {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
+                                                           {"fret": 11, "string": 5, "color": "blue", "label": "M7" },
+                                                           {"fret": 12, "string": 5, "color": "red", "label":  "R"},
+                                                           {"fret": 9, "string": 4, "color": "blue", "label":  "M2" },
+                                                           {"fret": 11, "string": 4, "color": "blue", "label": "M3" },
+                                                           {"fret": 12, "string": 4, "color": "blue", "label": "P4" },
+                                                           {"fret": 9, "string": 3, "color": "blue", "label":  "P5" },
+                                                           {"fret": 11, "string": 3, "color": "blue", "label": "M6" },
+                                                           {"fret": 13, "string": 3, "color": "blue", "label": "M7" },
+                                                           {"fret": 10, "string": 2, "color": "red", "label":  "R"},
+                                                           {"fret": 12, "string": 2, "color": "blue", "label": "M2" },
+                                                           {"fret": 14, "string": 2, "color": "blue", "label": "M3" },
+                                                           {"fret": 10, "string": 1, "color": "blue", "label": "P4" },
+                                                           {"fret": 12, "string": 1, "color": "blue", "label": "P5" },
+                                                           {"fret": 14, "string": 1, "color": "blue", "label": "M6" }
+                                                          ], "title": "Phrygian Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 10, "string": 6, "color": "blue", "label": "P4" },
+                                                           {"fret": 12, "string": 6, "color": "blue", "label": "P5" },
+                                                           {"fret": 14, "string": 6, "color": "blue", "label": "M6" },
+                                                           {"fret": 11, "string": 5, "color": "blue", "label": "M7" },
+                                                           {"fret": 12, "string": 5, "color": "red", "label":  "R"},
+                                                           {"fret": 14, "string": 5, "color": "blue", "label": "M2" },
+                                                           {"fret": 11, "string": 4, "color": "blue", "label": "M3" },
+                                                           {"fret": 12, "string": 4, "color": "blue", "label": "P4" },
+                                                           {"fret": 14, "string": 4, "color": "blue", "label": "P5" },
+                                                           {"fret": 11, "string": 3, "color": "blue", "label": "M6" },
+                                                           {"fret": 13, "string": 3, "color": "blue", "label": "M7" },
+                                                           {"fret": 14, "string": 3, "color": "red", "label":  "R"},
+                                                           {"fret": 12, "string": 2, "color": "blue", "label": "M2" },
+                                                           {"fret": 14, "string": 2, "color": "blue", "label": "M3" },
+                                                           {"fret": 15, "string": 2, "color": "blue", "label": "P4" },
+                                                           {"fret": 12, "string": 1, "color": "blue", "label": "P5" },
+                                                           {"fret": 14, "string": 1, "color": "blue", "label": "M6" },
+                                                           {"fret": 16, "string": 1, "color": "blue", "label": "M7" }
+                                                          ], "title": "Lydian Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 12, "string": 6, "color": "blue", "label":  "P5" },
+                                                           {"fret": 14, "string": 6, "color": "blue", "label": "M6" },
+                                                           {"fret": 16, "string": 6, "color": "blue", "label": "M7" },
+                                                           {"fret": 12, "string": 5, "color": "red", "label": "R"},
+                                                           {"fret": 14, "string": 5, "color": "blue", "label": "M2" },
+                                                           {"fret": 16, "string": 5, "color": "blue", "label": "M3" },
+                                                           {"fret": 12, "string": 4, "color": "blue", "label": "P4" },
+                                                           {"fret": 14, "string": 4, "color": "blue", "label":  "P5" },
+                                                           {"fret": 16, "string": 4, "color": "blue", "label": "M6" },
+                                                           {"fret": 13, "string": 3, "color": "blue", "label": "M7" },
+                                                           {"fret": 14, "string": 3, "color": "red", "label": "R"},
+                                                           {"fret": 16, "string": 3, "color": "blue", "label": "M2" },
+                                                           {"fret": 14, "string": 2, "color": "blue", "label": "M3" },
+                                                           {"fret": 15, "string": 2, "color": "blue", "label": "P4" },
+                                                           {"fret": 17, "string": 2, "color": "blue", "label":  "P5" },
+                                                           {"fret": 14, "string": 1, "color": "blue", "label": "M6" },
+                                                           {"fret": 16, "string": 1, "color": "blue", "label": "M7" },
+                                                           {"fret": 17, "string": 1, "color": "red", "label": "R" }
+                                                          ], "title": "Mixolydian Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 14, "string": 6, "color": "blue", "label":  "M6" },
+                                                           {"fret": 16, "string": 6, "color": "blue", "label": "M7" },
+                                                           {"fret": 17, "string": 6, "color": "red", "label": "R"},
+                                                           {"fret": 14, "string": 5, "color": "blue", "label": "M2" },
+                                                           {"fret": 16, "string": 5, "color": "blue", "label": "M3" },
+                                                           {"fret": 17, "string": 5, "color": "blue", "label": "P4" },
+                                                           {"fret": 14, "string": 4, "color": "blue", "label": "P5" },
+                                                           {"fret": 16, "string": 4, "color": "blue", "label":  "M6" },
+                                                           {"fret": 18, "string": 4, "color": "blue", "label": "M7" },
+                                                           {"fret": 14, "string": 3, "color": "red", "label": "R"},
+                                                           {"fret": 16, "string": 3, "color": "blue", "label": "M2" },
+                                                           {"fret": 18, "string": 3, "color": "blue", "label": "M3" },
+                                                           {"fret": 15, "string": 2, "color": "blue", "label": "P4" },
+                                                           {"fret": 17, "string": 2, "color": "blue", "label": "P5" },
+                                                           {"fret": 19, "string": 2, "color": "blue", "label":  "M6" },
+                                                           {"fret": 16, "string": 1, "color": "blue", "label": "M7" },
+                                                           {"fret": 17, "string": 1, "color": "red", "label": "R"},
+                                                           {"fret": 19, "string": 1, "color": "blue", "label": "M2" }
+                                                          ], "title": "Aeolian/ Natural Minor Shape" },
+                { "startFret": 0, "endFret": 21, "notes": [{"fret": 16, "string": 6, "color": "blue", "label":  "M7"},
+                                                           {"fret": 17, "string": 6, "color": "red", "label": "R"},
+                                                           {"fret": 19, "string": 6, "color": "blue", "label": "M2" },
+                                                           {"fret": 16, "string": 5, "color": "blue", "label": "M3" },
+                                                           {"fret": 17, "string": 5, "color": "blue", "label": "P4" },
+                                                           {"fret": 19, "string": 5, "color": "blue", "label": "P5" },
+                                                           {"fret": 16, "string": 4, "color": "blue", "label": "M6" },
+                                                           {"fret": 18, "string": 4, "color": "blue", "label":  "M7" },
+                                                           {"fret": 19, "string": 4, "color": "red", "label": "R"},
+                                                           {"fret": 16, "string": 3, "color": "blue", "label": "M2" },
+                                                           {"fret": 18, "string": 3, "color": "blue", "label": "M3" },
+                                                           {"fret": 19, "string": 3, "color": "blue", "label": "P4" },
+                                                           {"fret": 17, "string": 2, "color": "blue", "label": "P5" },
+                                                           {"fret": 19, "string": 2, "color": "blue", "label": "M6" },
+                                                           {"fret": 21, "string": 2, "color": "blue", "label":  "M7" },
+                                                           {"fret": 17, "string": 1, "color": "red", "label": "R"},
+                                                           {"fret": 19, "string": 1, "color": "blue", "label": "M2" },
+                                                           {"fret": 21, "string": 1, "color": "blue", "label": "M3" }
+                                                          ], "title": "Locrian Shape" }
+            ]
+        };
+
+        // Store config globally
+        window.fretboardGridConfigs = window.fretboardGridConfigs || {};
+        window.fretboardGridConfigs['church-modes-grid-2'] = churchModesGrid2Config;
+
+        // Initialize the grid when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('church-modes-grid-2');
+
+            // Set up container attributes
+            container.dataset.rows = churchModesGrid2Config.rows;
+            container.dataset.cols = churchModesGrid2Config.cols;
+            container.dataset.total = churchModesGrid2Config.items.length;
+            container.dataset.transposable = churchModesGrid2Config.transposable;
+
+            // Create hidden inputs for each item
+            churchModesGrid2Config.items.forEach((item, index) => {
+                const idx = index + 1;
+
+                if (item.startFret !== undefined) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.id = `church-modes-grid-2-fb-${idx}-start-fret`;
+                    inp.value = String(item.startFret);
+                    container.appendChild(inp);
+                }
+                if (item.endFret !== undefined) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.id = `church-modes-grid-2-fb-${idx}-end-fret`;
+                    inp.value = String(item.endFret);
+                    container.appendChild(inp);
+                }
+                if (item.notes !== undefined) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.id = `church-modes-grid-2-fb-${idx}-notes`;
+                    inp.value = JSON.stringify(item.notes);
+                    container.appendChild(inp);
+                }
+                if (item.title !== undefined) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.id = `church-modes-grid-2-fb-${idx}-title`;
+                    inp.value = String(item.title);
+                    container.appendChild(inp);
+                }
+                if (item.transposable !== undefined) {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.id = `church-modes-grid-2-fb-${idx}-transposable`;
+                    inp.value = String(item.transposable);
+                    container.appendChild(inp);
+                }
+            });
+
+            // Initialize the grid
+            if (window.initFretboardGrids) {
+                console.log('[Demo] Initializing fretboard grids...');
+                window.initFretboardGrids(document.body);
+                
+                // Verify what was created
+                setTimeout(() => {
+                    console.log('[Demo] Verification after grid init:');
+                    for (let i = 1; i <= 7; i++) {
+                        const svg = document.getElementById(`church-modes-grid-2-fb-${i}`);
+                        const notes = document.getElementById(`church-modes-grid-2-fb-${i}-notes`);
+                        console.log(`  - SVG ${i}: ${svg ? 'EXISTS' : 'MISSING'}, Notes: ${notes ? 'EXISTS' : 'MISSING'}`);
+                    }
+                }, 100);
+            } else {
+                console.error('[Demo] initFretboardGrids not available!');
+            }
+
+            // Add mode selector - wait a bit longer for grid initialization
+            if (window.ModeTransformer) {
+                setTimeout(() => {
+                    console.log('[Demo] Adding mode selector...');
+                    window.ModeTransformer.addModeSelector('church-modes-grid-2', churchModesGrid2Config);
+                }, 250);
+            } else {
+                console.error('[Demo] ModeTransformer not available!');
+            }
+
+            // Initialize global controls if available
+            if (window.initGlobalControls) {
+                window.initGlobalControls();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -32,6 +32,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.initFretboardGrids) {
                 try { window.initFretboardGrids(node); } catch (e) { console.error(e); }
             }
+            // initialize mode selector for church-modes-grid-2 if present
+            if (window.ModeTransformer && path === 'modes.md') {
+                try {
+                    // Wait a bit for grids to be fully initialized
+                    setTimeout(() => {
+                        const gridId = 'church-modes-grid-2';
+                        const gridContainer = document.getElementById(gridId);
+                        if (gridContainer && window.fretboardGridConfigs && window.fretboardGridConfigs[gridId]) {
+                            window.ModeTransformer.addModeSelector(gridId, window.fretboardGridConfigs[gridId]);
+                        }
+                    }, 100);
+                } catch (e) { console.error('Mode transformer initialization failed:', e); }
+            }
             // initialize any tabulature blocks that may have been injected
             if (window.initTabulatureEmbeds) {
                 try { window.initTabulatureEmbeds(node); } catch (e) { console.error(e); }

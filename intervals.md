@@ -115,7 +115,7 @@
 }
 ```
 
-## Intervals on the freboard
+## Intervals on the fretboard
 
 ```fretboard-grid
 {
@@ -264,3 +264,6 @@
   ]
 }
 ```
+
+## Intervals within modes:
+
