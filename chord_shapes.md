@@ -225,7 +225,7 @@
                                               {"fret": "X", "string": 5, "color": "red", "label": ""},
                                               {"fret": "X", "string": 4, "color": "red", "label": ""},
                                               {"fret": 14, "string": 3, "color": "red", "label": "R"},
-                                              {"fret": 14, "string": 2, "color": "blue", "label": M3""},
+                                              {"fret": 14, "string": 2, "color": "blue", "label": "M3"},
                                               {"fret": 16, "string": 1, "color": "blue", "label": "M7"}
                                              ], "title": "" },
     null,
