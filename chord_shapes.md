@@ -136,9 +136,9 @@
                                              ], "title": "" },
     { "startFret": 4, "endFret": 6, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
                                               {"fret": "X", "string": 5, "color": "red", "label": ""},
-                                              {"fret": 5, "string": 4, "color": "blue", "label": ""},
-                                              {"fret": 5, "string": 3, "color": "blue", "label": ""},
-                                              {"fret": 5, "string": 2, "color": "blue", "label": ""},
+                                              {"fret": 5, "string": 4, "color": "blue", "label": "m7"},
+                                              {"fret": 5, "string": 3, "color": "blue", "label": "m3"},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
                                               {"fret": "X", "string": 1, "color": "red", "label": ""}
                                              ], "title": "" },
     { "startFret": 2, "endFret": 5, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
@@ -174,7 +174,7 @@
                                               {"fret": "X", "string": 5, "color": "red", "label": ""},
                                               {"fret": 7, "string": 4, "color": "red", "label": "R"},
                                               {"fret": 9, "string": 3, "color": "blue", "label": "P5"},
-                                              {"fret": 8, "string": 2, "color": "blue", "label": "M7"},
+                                              {"fret": 8, "string": 2, "color": "blue", "label": "m7"},
                                               {"fret": 8, "string": 1, "color": "blue", "label": "m3"}
                                              ], "title": "" },
     { "startFret": 7, "endFret": 9, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
@@ -188,9 +188,9 @@
     { "startFret": 4, "endFret": 7, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
                                               {"fret": "X", "string": 5, "color": "red", "label": ""},
                                               {"fret": 7, "string": 4, "color": "red", "label": "R"},
-                                              {"fret": 6, "string": 3, "color": "blue", "label": ""},
-                                              {"fret": 5, "string": 2, "color": "blue", "label": ""},
-                                              {"fret": 4, "string": 1, "color": "blue", "label": ""}
+                                              {"fret": 6, "string": 3, "color": "blue", "label": "M3"},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
+                                              {"fret": 4, "string": 1, "color": "blue", "label": "M7"}
                                              ], "title": "" },
     null,
     null,
@@ -199,8 +199,8 @@
 
     { "startFret": 11, "endFret": 13, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
                                               {"fret": 12, "string": 5, "color": "red", "label": "R"},
-                                              {"fret": 11, "string": 4, "color": "blue", "label": ""},
-                                              {"fret": 13, "string": 3, "color": "blue", "label": ""},
+                                              {"fret": 11, "string": 4, "color": "blue", "label": "M3"},
+                                              {"fret": 13, "string": 3, "color": "blue", "label": "M7"},
                                               {"fret": "X", "string": 2, "color": "red", "label": ""},
                                               {"fret": "X", "string": 1, "color": "red", "label": ""}
                                              ], "title": "" },
@@ -210,11 +210,11 @@
     null,
 
     { "startFret": 4, "endFret": 6, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
-                                              {"fret": 6, "string": 5, "color": "blue", "label": ""},
-                                              {"fret": 6, "string": 4, "color": "blue", "label": ""},
-                                              {"fret": 5, "string": 3, "color": "blue", "label": ""},
-                                              {"fret": 4, "string": 2, "color": "blue", "label": ""},
-                                              {"fret": "x", "string": 1, "color": "red", "label": ""}
+                                              {"fret": "x", "string": 5, "color": "red", "label": ""},
+                                              {"fret": 6, "string": 4, "color": "blue", "label": "M7"},
+                                              {"fret": 6, "string": 3, "color": "blue", "label": "M3"},
+                                              {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
+                                              {"fret": 4, "string": 1, "color": "blue", "label": "M7"}
                                              ], "title": "" },
     null,
     null,
@@ -224,9 +224,9 @@
     { "startFret": 14, "endFret": 16, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
                                               {"fret": "X", "string": 5, "color": "red", "label": ""},
                                               {"fret": "X", "string": 4, "color": "red", "label": ""},
-                                              {"fret": 14, "string": 3, "color": "red", "label": ""},
-                                              {"fret": 14, "string": 2, "color": "blue", "label": ""},
-                                              {"fret": 16, "string": 1, "color": "blue", "label": ""}
+                                              {"fret": 14, "string": 3, "color": "red", "label": "R"},
+                                              {"fret": 14, "string": 2, "color": "blue", "label": M3""},
+                                              {"fret": 16, "string": 1, "color": "blue", "label": "M7"}
                                              ], "title": "" },
     null,
     null,
