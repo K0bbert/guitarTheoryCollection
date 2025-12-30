@@ -244,8 +244,9 @@ button.color:hover {
 /* Wrapper to enable scrolling - add this class via JS or HTML */
 .fretboard-grid-scroll-wrapper {
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto; /* enable vertical scrolling */
     width: 100%;
+    max-height: 90vh; /* limit height to 90% of viewport to enable scrolling */
     margin: 12px 0;
 }
 
@@ -353,6 +354,20 @@ button.color:hover {
     background: #f8f8f8;
     border:0px solid #eee;
     font-weight: 600;
+}
+
+.grid-col-title {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f8f8;
+}
+
+.grid-corner {
+    position: sticky;
+    top: 0;
+    z-index: 11;
+    background: #f8f8f8;
 }
 
 .grid-row-title {
