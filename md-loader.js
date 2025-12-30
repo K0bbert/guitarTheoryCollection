@@ -45,6 +45,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }, 100);
                 } catch (e) { console.error('Mode transformer initialization failed:', e); }
             }
+            // initialize harmonic minor mode selector for harmonic-minor-modes-grid-2 if present
+            if (window.HarmonicMinorModeTransformer && path === 'harmonic-minor-modes.md') {
+                try {
+                    // Wait a bit for grids to be fully initialized
+                    setTimeout(() => {
+                        const gridId = 'harmonic-minor-modes-grid-2';
+                        const gridContainer = document.getElementById(gridId);
+                        if (gridContainer && window.fretboardGridConfigs && window.fretboardGridConfigs[gridId]) {
+                            window.HarmonicMinorModeTransformer.addHarmonicMinorModeSelector(gridId, window.fretboardGridConfigs[gridId]);
+                        }
+                    }, 100);
+                } catch (e) { console.error('Harmonic minor mode transformer initialization failed:', e); }
+            }
             // initialize any tabulature blocks that may have been injected
             if (window.initTabulatureEmbeds) {
                 try { window.initTabulatureEmbeds(node); } catch (e) { console.error(e); }

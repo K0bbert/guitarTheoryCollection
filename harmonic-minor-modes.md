@@ -162,7 +162,7 @@ Scale Intervals: W H W W H W+ H H
   "height": 260,
   "transposable": true,
   "items": [
-    { "startFret": 0, "endFret": 21, "notes": [{"fret": 5, "string": 6, "color": "blue", "label":  "R"},
+    { "startFret": 0, "endFret": 21, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
                                                {"fret": 5, "string": 5, "color": "blue", "label":  "P4" },
