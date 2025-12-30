@@ -202,6 +202,19 @@
         if (!containers || containers.length === 0) return;
         console.log('initFretboardGrids: found containers', containers.length);
 
+        // Wrap each grid in a scroll wrapper for horizontal scrolling
+        containers.forEach(grid => {
+            if (!grid.parentElement.classList.contains('fretboard-grid-scroll-wrapper')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'fretboard-grid-scroll-wrapper';
+                grid.parentElement.insertBefore(wrapper, grid);
+                wrapper.appendChild(grid);
+            }
+        });
+
+        // Re-select after wrapping
+        const wrappedContainers = (root || document).querySelectorAll('.fretboard-grid');
+
         // small example note sets (can be overridden later)
         const noteSets = [
             [ { fret: 0, string: 0, color: 'blue', label: 'R' }, { fret: 3, string: 0, color: 'blue', label: 'b3' } ],
@@ -210,7 +223,7 @@
             [ { fret: 0, string: 3, color: 'blue', label: '1' } ]
         ];
 
-        containers.forEach(container => {
+        wrappedContainers.forEach(container => {
             const rows = Number.isFinite(parseInt(container.dataset.rows)) ? parseInt(container.dataset.rows) : 5;
             const cols = Number.isFinite(parseInt(container.dataset.cols)) ? parseInt(container.dataset.cols) : 5;
             const total = Number.isFinite(parseInt(container.dataset.total)) ? parseInt(container.dataset.total) : (rows * cols);

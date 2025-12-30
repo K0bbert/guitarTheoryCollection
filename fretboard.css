@@ -237,8 +237,16 @@ button.color:hover {
     background-color: white;
     border-radius: 0px;
     box-shadow: 0 2px 0px rgba(0, 0, 0, 0.05);
-    width: max-content; /* expand to fit content instead of shrinking */
-    min-width: 100%; /* but use full width when possible */
+    width: max-content; /* expand to fit content */
+    min-width: 100%; /* use full width when possible */
+}
+
+/* Wrapper to enable scrolling - add this class via JS or HTML */
+.fretboard-grid-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+    margin: 12px 0;
 }
 
 .fretboard-item {
@@ -312,7 +320,6 @@ button.color:hover {
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     color: #222;
     line-height: 1.5;
-    overflow-x: auto; /* enable horizontal scroll for wide content */
 }
 .md-content h1, .md-content h2, .md-content h3 { color: #111; }
 
