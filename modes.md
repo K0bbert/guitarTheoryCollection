@@ -297,12 +297,12 @@
 }
 ```
 
-| **Mode/Scale Degree**         | **1st (Root)** | **2nd**   | **3rd**   | **4th**       | **5th**        | **6th**   | **7th**   |
-| ----------------------------- | -------------- | --------- | --------- | ------------- | -------------- | --------- | --------- |
-| **C Ionian (Major)**          | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Perfect 5th    | Major 6th | Major 7th |
-| **C Dorian**                  | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Major 6th | Minor 7th |
-| **C Phrygian**                | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
-| **C Lydian**                  | Perfect Unison | Major 2nd | Major 3rd | Augmented 4th | Perfect 5th    | Major 6th | Major 7th |
-| **C Mixolydian**              | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
-| **C Aeolian (Natural Minor)** | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
-| **C Locrian**                 | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Diminished 5th | Minor 6th | Minor 7th |
+| **Mode/Scale Degree**       | **1st (Root)** | **2nd**   | **3rd**   | **4th**       | **5th**        | **6th**   | **7th**   |
+|-----------------------------|----------------|-----------|-----------|---------------|----------------|-----------|-----------|
+| **Ionian (Major)**          | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Perfect 5th    | Major 6th | Major 7th |
+| **Dorian**                  | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Major 6th | Minor 7th |
+| **Phrygian**                | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
+| **Lydian**                  | Perfect Unison | Major 2nd | Major 3rd | Augmented 4th | Perfect 5th    | Major 6th | Major 7th |
+| **Mixolydian**              | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
+| **Aeolian (Natural Minor)** | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
+| **Locrian**                 | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Diminished 5th | Minor 6th | Minor 7th |

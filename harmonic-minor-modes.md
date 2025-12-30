@@ -1,5 +1,5 @@
 # Guitar modes
-## Church modes
+## Harmonic minor modes
 ### Root note dictates modes (e.g. A Harmonic Minor #1/ A Harmonic Minor #2/ ...)
 ```fretboard-grid
 {
@@ -12,99 +12,99 @@
   "items": [
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 6, "color": "blue", "label":  "m3" },
+                                               {"fret": 9, "string": 6, "color": "blue", "label":  "M3" },
                                                {"fret": 5, "string": 5, "color": "blue", "label":  "P4" },
-                                               {"fret": 8, "string": 5, "color": "blue", "label":  "P5" },
-                                               {"fret": 9, "string": 5, "color": "blue", "label":  "m6" },
+                                               {"fret": 8, "string": 5, "color": "blue", "label":  "Aug5" },
+                                               {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
                                                {"fret": 6, "string": 4, "color": "blue", "label":  "M7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
                                                {"fret": 9, "string": 4, "color": "blue", "label":  "M2" },
-                                               {"fret": 6, "string": 3, "color": "blue", "label":  "m3" },
+                                               {"fret": 6, "string": 3, "color": "blue", "label":  "M3" },
                                                {"fret": 7, "string": 3, "color": "blue", "label":  "P4" },
-                                               {"fret": 10, "string": 3, "color": "blue", "label": "P5" },
-                                               {"fret": 7, "string": 2, "color": "blue", "label":  "m6" },
+                                               {"fret": 10, "string": 3, "color": "blue", "label": "Aug5" },
+                                               {"fret": 7, "string": 2, "color": "blue", "label":  "M6" },
                                                {"fret": 9, "string": 2, "color": "blue", "label":  "M7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
                                                {"fret": 7, "string": 1, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 1, "color": "blue", "label":  "m3" },
+                                               {"fret": 9, "string": 1, "color": "blue", "label":  "M3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Ionian/ Major)" },
+                                              ], "title": "Ionian #5" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
-                                               {"fret": 6, "string": 5, "color": "blue", "label":  "P4" },
+                                               {"fret": 6, "string": 5, "color": "blue", "label":  "Aug4" },
                                                {"fret": 7, "string": 5, "color": "blue", "label":  "P5" },
-                                               {"fret": 9, "string": 5, "color": "blue", "label":  "m6" },
-                                               {"fret": 5, "string": 4, "color": "blue", "label":  "M7" },
+                                               {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
+                                               {"fret": 5, "string": 4, "color": "blue", "label":  "m7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
                                                {"fret": 9, "string": 4, "color": "blue", "label":  "M2" },
                                                {"fret": 5, "string": 3, "color": "blue", "label":  "m3" },
-                                               {"fret": 8, "string": 3, "color": "blue", "label":  "P4" },
+                                               {"fret": 8, "string": 3, "color": "blue", "label":  "Aug4" },
                                                {"fret": 9, "string": 3, "color": "blue", "label":  "P5" },
-                                               {"fret": 7, "string": 2, "color": "blue", "label":  "m6" },
-                                               {"fret": 8, "string": 2, "color": "blue", "label":  "M7" },
+                                               {"fret": 7, "string": 2, "color": "blue", "label":  "M6" },
+                                               {"fret": 8, "string": 2, "color": "blue", "label":  "m7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
                                                {"fret": 7, "string": 1, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
-                                               {"fret": 11, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Dorian Shape)" },
+                                               {"fret": 11, "string": 1, "color": "blue", "label": "Aug4" }
+                                              ], "title": "Dorian #4" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
-                                               {"fret": 6, "string": 6, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 6, "color": "blue", "label":  "m3" },
+                                               {"fret": 6, "string": 6, "color": "blue", "label":  "m2" },
+                                               {"fret": 9, "string": 6, "color": "blue", "label":  "M3" },
                                                {"fret": 5, "string": 5, "color": "blue", "label":  "P4" },
                                                {"fret": 7, "string": 5, "color": "blue", "label":  "P5" },
                                                {"fret": 8, "string": 5, "color": "blue", "label":  "m6" },
-                                               {"fret": 5, "string": 4, "color": "blue", "label":  "M7" },
+                                               {"fret": 5, "string": 4, "color": "blue", "label":  "m7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
-                                               {"fret": 8, "string": 4, "color": "blue", "label":  "M2" },
-                                               {"fret": 6, "string": 3, "color": "blue", "label":  "m3" },
+                                               {"fret": 8, "string": 4, "color": "blue", "label":  "m2" },
+                                               {"fret": 6, "string": 3, "color": "blue", "label":  "M3" },
                                                {"fret": 7, "string": 3, "color": "blue", "label":  "P4" },
                                                {"fret": 9, "string": 3, "color": "blue", "label":  "P5" },
                                                {"fret": 6, "string": 2, "color": "blue", "label":  "m6" },
-                                               {"fret": 8, "string": 2, "color": "blue", "label":  "M7" },
+                                               {"fret": 8, "string": 2, "color": "blue", "label":  "m7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
-                                               {"fret": 6, "string": 1, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 1, "color": "blue", "label":  "m3" },
+                                               {"fret": 6, "string": 1, "color": "blue", "label":  "m2" },
+                                               {"fret": 9, "string": 1, "color": "blue", "label":  "M3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Phrygian Shape)" },
+                                              ], "title": "Phrygian Dominant" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
-                                               {"fret": 8, "string": 6, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 6, "color": "blue", "label":  "m3" },
-                                               {"fret": 6, "string": 5, "color": "blue", "label":  "P4" },
+                                               {"fret": 8, "string": 6, "color": "blue", "label":  "Aug2" },
+                                               {"fret": 9, "string": 6, "color": "blue", "label":  "M3" },
+                                               {"fret": 6, "string": 5, "color": "blue", "label":  "Aug4" },
                                                {"fret": 7, "string": 5, "color": "blue", "label":  "P5" },
-                                               {"fret": 9, "string": 5, "color": "blue", "label":  "m6" },
+                                               {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
                                                {"fret": 6, "string": 4, "color": "blue", "label":  "M7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
-                                               {"fret": 10, "string": 4, "color": "blue", "label": "M2" },
-                                               {"fret": 6, "string": 3, "color": "blue", "label":  "m3" },
-                                               {"fret": 8, "string": 3, "color": "blue", "label":  "P4" },
+                                               {"fret": 10, "string": 4, "color": "blue", "label": "Aug2" },
+                                               {"fret": 6, "string": 3, "color": "blue", "label":  "M3" },
+                                               {"fret": 8, "string": 3, "color": "blue", "label":  "Aug4" },
                                                {"fret": 9, "string": 3, "color": "blue", "label":  "P5" },
-                                               {"fret": 7, "string": 2, "color": "blue", "label":  "m6" },
+                                               {"fret": 7, "string": 2, "color": "blue", "label":  "M6" },
                                                {"fret": 9, "string": 2, "color": "blue", "label":  "M7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
-                                               {"fret": 8, "string": 1, "color": "blue", "label":  "M2" },
-                                               {"fret": 9, "string": 1, "color": "blue", "label":  "m3" },
-                                               {"fret": 11, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Lydian Shape)" },
+                                               {"fret": 8, "string": 1, "color": "blue", "label":  "Aug2" },
+                                               {"fret": 9, "string": 1, "color": "blue", "label":  "M3" },
+                                               {"fret": 11, "string": 1, "color": "blue", "label": "Aug4" }
+                                              ], "title": "Lydian #2" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
-                                               {"fret": 6, "string": 6, "color": "blue", "label":  "M2" },
+                                               {"fret": 6, "string": 6, "color": "blue", "label":  "m2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
-                                               {"fret": 4, "string": 5, "color": "blue", "label":  "P4" },
-                                               {"fret": 6, "string": 5, "color": "blue", "label":  "P5" },
+                                               {"fret": 4, "string": 5, "color": "blue", "label":  "Dim4" },
+                                               {"fret": 6, "string": 5, "color": "blue", "label":  "Dim5" },
                                                {"fret": 8, "string": 5, "color": "blue", "label":  "m6" },
-                                               {"fret": 4, "string": 4, "color": "blue", "label":  "M7" },
+                                               {"fret": 4, "string": 4, "color": "blue", "label":  "m7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
-                                               {"fret": 8, "string": 4, "color": "blue", "label":  "M2" },
+                                               {"fret": 8, "string": 4, "color": "blue", "label":  "m2" },
                                                {"fret": 5, "string": 3, "color": "blue", "label":  "m3" },
-                                               {"fret": 6, "string": 3, "color": "blue", "label":  "P4" },
-                                               {"fret": 8, "string": 3, "color": "blue", "label":  "P5" },
+                                               {"fret": 6, "string": 3, "color": "blue", "label":  "Dim4" },
+                                               {"fret": 8, "string": 3, "color": "blue", "label":  "Dim5" },
                                                {"fret": 6, "string": 2, "color": "blue", "label":  "m6" },
-                                               {"fret": 7, "string": 2, "color": "blue", "label":  "M7" },
+                                               {"fret": 7, "string": 2, "color": "blue", "label":  "m7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
-                                               {"fret": 6, "string": 1, "color": "blue", "label":  "M2" },
+                                               {"fret": 6, "string": 1, "color": "blue", "label":  "m2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
-                                               {"fret": 9, "string": 1, "color": "blue", "label":  "P4" }
-                                              ], "title": "(Close to Mixolydian Shape)" },
+                                               {"fret": 9, "string": 1, "color": "blue", "label":  "Dim4" }
+                                              ], "title": "Super Locrian (Close to Mixolydian Shape)" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
                                                {"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
@@ -123,26 +123,26 @@
                                                {"fret": 7, "string": 1, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Aeolian/ Natural Minor Shape)" },
+                                              ], "title": "Harmonic Minor (Close to Aeolian/ Natural Minor Shape)" },
     { "startFret": 5, "endFret": 10, "notes": [{"fret": 5, "string": 6, "color": "red", "label":   "R"},
-                                               {"fret": 6, "string": 6, "color": "blue", "label":  "M2" },
+                                               {"fret": 6, "string": 6, "color": "blue", "label":  "m2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
                                                {"fret": 5, "string": 5, "color": "blue", "label":  "P4" },
-                                               {"fret": 6, "string": 5, "color": "blue", "label":  "P5" },
-                                               {"fret": 9, "string": 5, "color": "blue", "label":  "m6" },
-                                               {"fret": 5, "string": 4, "color": "blue", "label":  "M7" },
+                                               {"fret": 6, "string": 5, "color": "blue", "label":  "Dim5" },
+                                               {"fret": 9, "string": 5, "color": "blue", "label":  "M6" },
+                                               {"fret": 5, "string": 4, "color": "blue", "label":  "m7" },
                                                {"fret": 7, "string": 4, "color": "red", "label":   "R"},
-                                               {"fret": 8, "string": 4, "color": "blue", "label":  "M2" },
+                                               {"fret": 8, "string": 4, "color": "blue", "label":  "m2" },
                                                {"fret": 5, "string": 3, "color": "blue", "label":  "m3" },
                                                {"fret": 7, "string": 3, "color": "blue", "label":  "P4" },
-                                               {"fret": 8, "string": 3, "color": "blue", "label":  "P5" },
-                                               {"fret": 7, "string": 2, "color": "blue", "label":  "m6" },
-                                               {"fret": 8, "string": 2, "color": "blue", "label":  "M7" },
+                                               {"fret": 8, "string": 3, "color": "blue", "label":  "Dim5" },
+                                               {"fret": 7, "string": 2, "color": "blue", "label":  "M6" },
+                                               {"fret": 8, "string": 2, "color": "blue", "label":  "m7" },
                                                {"fret": 10, "string": 2, "color": "red", "label":  "R"},
-                                               {"fret": 6, "string": 1, "color": "blue", "label":  "M2" },
+                                               {"fret": 6, "string": 1, "color": "blue", "label":  "m2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Locrian Shape)" },
+                                              ], "title": "Locrian b6" },
     null,
     null
   ]
@@ -180,7 +180,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 7, "string": 1, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" }
-                                              ], "title": "(Close to Aeolian/ Natural Minor Shape)" },
+                                              ], "title": "Harmonic Minor (Close to Aeolian/ Natural Minor Shape)" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 7, "string": 6, "color": "blue", "label":  "M2" },
                                                {"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 6, "color": "blue", "label": "P4" },
@@ -199,7 +199,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 8, "string": 1, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" },
                                                {"fret": 12, "string": 1, "color": "blue", "label": "P5" }
-                                              ], "title": "(Close to Locrian Shape)" },
+                                              ], "title": "Locrian b6" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 8, "string": 6, "color": "blue", "label":  "m3" },
                                                {"fret": 10, "string": 6, "color": "blue", "label": "P4" },
                                                {"fret": 12, "string": 6, "color": "blue", "label": "P5" },
@@ -218,7 +218,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 10, "string": 1, "color": "blue", "label": "P4" },
                                                {"fret": 12, "string": 1, "color": "blue", "label": "P5" },
                                                {"fret": 13, "string": 1, "color": "blue", "label": "m6" }
-                                              ], "title": "(Close to Ionian/ Major Shape)" },
+                                              ], "title": "Ionian #5" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 10, "string": 6, "color": "blue", "label": "P4" },
                                                {"fret": 12, "string": 6, "color": "blue", "label": "P5" },
                                                {"fret": 13, "string": 6, "color": "blue", "label": "m6" },
@@ -237,7 +237,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 12, "string": 1, "color": "blue", "label": "P5" },
                                                {"fret": 13, "string": 1, "color": "blue", "label": "m6" },
                                                {"fret": 16, "string": 1, "color": "blue", "label": "M7" }
-                                              ], "title": "(Close to Dorian Shape)" },
+                                              ], "title": "Dorian #4" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 12, "string": 6, "color": "blue", "label": "P5" },
                                                {"fret": 13, "string": 6, "color": "blue", "label": "m6" },
                                                {"fret": 16, "string": 6, "color": "blue", "label": "M7" },
@@ -256,7 +256,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 13, "string": 1, "color": "blue", "label": "m6" },
                                                {"fret": 16, "string": 1, "color": "blue", "label": "M7" },
                                                {"fret": 17, "string": 1, "color": "red", "label":  "R" }
-                                              ], "title": "(Close to Phrygian Shape)" },
+                                              ], "title": "Phrygian Dominant" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 13, "string": 6, "color": "blue", "label": "m6" },
                                                {"fret": 16, "string": 6, "color": "blue", "label": "M7" },
                                                {"fret": 17, "string": 6, "color": "red", "label":  "R"},
@@ -275,7 +275,7 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 16, "string": 1, "color": "blue", "label": "M7" },
                                                {"fret": 17, "string": 1, "color": "red", "label":  "R" },
                                                {"fret": 19, "string": 1, "color": "blue", "label": "M2" }
-                                              ], "title": "(Close to Lydian Shape)" },
+                                              ], "title": "Lydian #2" },
     { "startFret": 0, "endFret": 21, "notes": [{"fret": 16, "string": 6, "color": "blue", "label": "M7" },
                                                {"fret": 17, "string": 6, "color": "red", "label":  "R"},
                                                {"fret": 19, "string": 6, "color": "blue", "label": "M2" },
@@ -294,18 +294,18 @@ Scale Intervals: W H W W H W+ H H
                                                {"fret": 17, "string": 1, "color": "red", "label":  "R" },
                                                {"fret": 19, "string": 1, "color": "blue", "label": "M2" },
                                                {"fret": 20, "string": 1, "color": "blue", "label": "m3" }
-                                              ], "title": "(Close to Mixolydian Shape)" }
+                                              ], "title": "Super Locrian (Close to Mixolydian Shape)" }
   ]
 }
 ```
 
-| **Mode/Scale Degree**                                 | **1st (Root)** | **2nd**   | **3rd**   | **4th**       | **5th**        | **6th**   | **7th**   |
-| ----------------------------------------------------- | -------------- | --------- | --------- | ------------- | -------------- | --------- | --------- |
-| **C Harmonic Minor (C - D - Eb - F - G - Ab - B)**    | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Augmented 5th  | Minor 6th | Major 7th |
-| **C Locrian ♮6 (D - Eb - F - G - Ab - B - C)**        | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Augmented 5th  | Major 6th | Minor 7th |
-| **C Ionian #5 (E - F - G - Ab - B - C - D)**          | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Augmented 5th  | Major 6th | Major 7th |
-| **C Dorian #4 (F - G - Ab - B - C - D - Eb)**         | Perfect Unison | Major 2nd | Minor 3rd | Augmented 4th | Augmented 5th  | Major 6th | Minor 7th |
-| **C Phrygian Dominant (G - Ab - B - C - D - Eb - F)** | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Augmented 5th  | Minor 6th | Major 7th |
-| **C Lydian #2 (A - B - C - D - Eb - F - G)**          | Perfect Unison | Major 2nd | Major 3rd | Augmented 4th | Perfect 5th    | Major 6th | Major 7th |
-| **C Super Locrian (B - C - D - Eb - F - G - Ab)**     | Perfect Unison | Minor 2nd | Major 3rd | Perfect 4th   | Diminished 5th | Minor 6th | Major 7th |
+| **Mode/Scale Degree** | **1st (Root)** | **2nd**       | **3rd**   | **4th**        | **5th**        | **6th**   | **7th**   |
+|-----------------------|----------------|---------------|-----------|----------------|----------------|-----------|-----------|
+| **Harmonic Minor**    | Perfect Unison | Major 2nd     | Minor 3rd | Perfect 4th    | Perfect 5th    | Minor 6th | Major 7th |
+| **Locrian ♮6**        | Perfect Unison | Minor 2nd     | Minor 3rd | Perfect 4th    | Diminished 5th | Major 6th | Minor 7th |
+| **Ionian #5**         | Perfect Unison | Major 2nd     | Major 3rd | Perfect 4th    | Augmented 5th  | Major 6th | Major 7th |
+| **Dorian #4**         | Perfect Unison | Major 2nd     | Minor 3rd | Augmented 4th  | Perfect 5th    | Major 6th | Minor 7th |
+| **Phrygian Dominant** | Perfect Unison | Minor 2nd     | Major 3rd | Perfect 4th    | Perfect 5th    | Minor 6th | Minor 7th |
+| **Lydian #2**         | Perfect Unison | Augmented 2nd | Major 3rd | Augmented 4th  | Perfect 5th    | Major 6th | Major 7th |
+| **Super Locrian**     | Perfect Unison | Minor 2nd     | Minor 3rd | Diminished 4th | Diminished 5th | Minor 6th | Minor 7th |
 
