@@ -249,6 +249,19 @@ button.color:hover {
     margin: 12px 0;
 }
 
+/* Wrapper for individual fretboards */
+.fretboard-embed-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+    margin: 12px 0;
+}
+
+.fretboard-embed {
+    width: max-content;
+    min-width: 100%;
+}
+
 .fretboard-item {
     display: flex;
     flex-direction: column;

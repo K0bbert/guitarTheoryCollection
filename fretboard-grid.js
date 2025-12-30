@@ -74,9 +74,14 @@
             svg.setAttribute('style', 'background-color: white;');
             container.appendChild(svg);
 
-            // replace the <pre> parent with the container
+            // wrap in scroll wrapper
+            const scrollWrapper = document.createElement('div');
+            scrollWrapper.className = 'fretboard-embed-scroll-wrapper';
+            scrollWrapper.appendChild(container);
+
+            // replace the <pre> parent with the scroll wrapper
             const pre = code.parentNode;
-            pre.parentNode.replaceChild(container, pre);
+            pre.parentNode.replaceChild(scrollWrapper, pre);
 
             // initialize Fretboard
             const fbOpts = { svg: svg };
