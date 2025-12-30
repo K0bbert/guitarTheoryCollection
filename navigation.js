@@ -1,18 +1,7 @@
 // Navigation and burger menu functionality
 
-// Show only Home on page load (after markdown is loaded)
-window.addEventListener('load', () => {
-  // Hide all content sections except Home
-  document.querySelectorAll('.md-content').forEach(section => {
-    const mdFile = section.getAttribute('data-md');
-    if (mdFile === 'header.md') {
-      section.style.display = 'block';
-    } else {
-      section.style.display = 'none';
-    }
-  });
-
-  // Set Home link as active
+// Set Home link as active on initial load
+document.addEventListener('DOMContentLoaded', () => {
   const homeLink = document.querySelector('.burger-nav a[data-page="header.md"]');
   if (homeLink) {
     homeLink.classList.add('active');
