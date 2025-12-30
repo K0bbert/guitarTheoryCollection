@@ -1,40 +1,138 @@
-### Debug/ preview stuff locally:
+# Notes on the fretboard
+## Example: One note over whole fretboard
 
-Start a python server as follows from project folder:
-`python -m http.server 8000`
-then open:
-`http://localhost:8000/index.html`
+```fretboard-grid
+{
+  "id": "intervals-grid-1",
+  "rows": 3,
+  "cols": 1,
+  "width": 600,
+  "height": 260,
+  "transposable": false,
+  "items": [
+            { "startFret": 0, "endFret": 13,   "notes": [
+            { "fret": 13, "string": 6, "color": "red", "label": "R" },
+            { "fret": 1, "string": 6, "color": "red", "label": "R" },
+            { "fret": 8, "string": 5, "color": "red", "label": "R" },
+            { "fret": 3, "string": 4, "color": "red", "label": "R" },
+            { "fret": 10, "string": 3, "color": "red", "label": "R" },
+            { "fret": 6, "string": 2, "color": "red", "label": "R" },
+            { "fret": 13, "string": 1, "color": "red", "label": "R" },
+            { "fret": 1, "string": 1, "color": "red", "label": "R" }
+          ], "title": "F" },
 
-# This is a markdown title
+            { "startFret": 0, "endFret": 13,   "notes": [
+            { "fret": 5, "string": 6, "color": "red", "label": "R" },
+            { "fret": 12, "string": 5, "color": "red", "label": "R" },
+            { "fret": 0, "string": 5, "color": "red", "label": "R" },
+            { "fret": 7, "string": 4, "color": "red", "label": "R" },
+            { "fret": 2, "string": 3, "color": "red", "label": "R" },
+            { "fret": 10, "string": 2, "color": "red", "label": "R" },
+            { "fret": 5, "string": 1, "color": "red", "label": "R" }
+        ], "title": "A" },
 
-This is some content
-sss
-a list for example:
-- item 1
-- item 2
+            { "startFret": 0, "endFret": 13,   "notes": [
+            { "fret": 8, "string": 6, "color": "red", "label": "R" },
+            { "fret": 3, "string": 5, "color": "red", "label": "R" },
+            { "fret": 10, "string": 4, "color": "red", "label": "R" },
+            { "fret": 5, "string": 3, "color": "red", "label": "R" },
+            { "fret": 1, "string": 2, "color": "red", "label": "R" },
+            { "fret": 13, "string": 2, "color": "red", "label": "R" },
+            { "fret": 8, "string": 1, "color": "red", "label": "R" }
+        ], "title": "C" }
+  ]
+}
+```
 
-| test | a        |  |
-|------|----------|--|
-| a    | coontetn |  |
-| b    |          |  |
-|      |          |  |
+### Example: All notes in C Ionian
 
-and so on
+```fretboard
+{
+  "startFret": 0,
+  "endFret": 12,
+  "width": 750,
+  "height": 270,
+  "transposable": false,
+  "notes": [
 
-## new subtitle
+    { "fret": 10, "string": 6, "color": "red", "label": "R" },
+    { "fret": 5, "string": 5, "color": "red", "label": "R" },
+    { "fret": 12, "string": 4, "color": "red", "label": "R" },
+    { "fret": 7, "string": 3, "color": "red", "label": "R" },
+    { "fret": 3, "string": 2, "color": "red", "label": "R" },
+    { "fret": 10, "string": 1, "color": "red", "label": "R" },
 
-more content
+    { "fret": 8, "string": 6, "color": "red", "label": "R" },
+    { "fret": 3, "string": 5, "color": "red", "label": "R" },
+    { "fret": 10, "string": 4, "color": "red", "label": "R" },
+    { "fret": 5, "string": 3, "color": "red", "label": "R" },
+    { "fret": 1, "string": 2, "color": "red", "label": "R" },
+    { "fret": 8, "string": 1, "color": "red", "label": "R" },
 
+    { "fret": 7, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 2, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 9, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 4, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 12, "string": 2, "color": "blue", "label": "" },
+    { "fret": 7, "string": 1, "color": "blue", "label":  "" },
 
-Here is my idea:
+    { "fret": 5, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 12, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 7, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 2, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 10, "string": 2, "color": "blue", "label": "" },
+    { "fret": 5, "string": 1, "color": "blue", "label":  "" },
 
-More notes...
+    { "fret": 3, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 10, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 5, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 12, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 8, "string": 2, "color": "blue", "label": "" },
+    { "fret": 3, "string": 1, "color": "blue", "label":  "" },
 
-more content end
+    { "fret": 1, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 8, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 3, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 10, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 6, "string": 2, "color": "blue", "label": "" },
+    { "fret": 1, "string": 1, "color": "blue", "label":  "" },
 
-and more
+    { "fret": 12, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 7, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 2, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 9, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 5, "string": 2, "color": "blue", "label": "" },
+    { "fret": 12, "string": 1, "color": "blue", "label":  "" },
 
-Here is my idea:
+    { "fret": 0, "string": 6, "color": "blue", "label":  "" },
+    { "fret": 0, "string": 5, "color": "blue", "label":  "" },
+    { "fret": 0, "string": 4, "color": "blue", "label":  "" },
+    { "fret": 0, "string": 3, "color": "blue", "label":  "" },
+    { "fret": 0, "string": 2, "color": "blue", "label": "" },
+    { "fret": 0, "string": 1, "color": "blue", "label":  "" }
+  ]
+}
+```
 
+# Testing tabulature
 
-More notes...
+```tabulature
+{
+  "tuning" : "E A D G B E",
+  "content":[
+    "|-------10-8-----------------------------|",
+    "|------------10-------10-8-10-8----------|",
+    "|-7---7--------------------------9-7-----|",
+    "|-0---------------------------------(9)--|",
+    "|-0--------------------------------------|",
+    "|-0--------------------------------------|",
+    "",
+    "|---6-----8----------------|",
+    "|---5-----7----------------|",
+    "|---3-----5--------------3-|",
+    "|---3-----5---(0)-2h3-2----|",
+    "|---3-----5----------------|",
+    "|---3-----5----------------|"
+  ]
+}
+```

@@ -4,7 +4,7 @@
 ```fretboard-grid
 {
   "id": "chord-grid-1",
-  "rows": 9,
+  "rows": 8,
   "cols": 5,
   "colTitles": ["Major 7", "Major", "Minor", "Minor 7", "7"],
   "width": 600,
@@ -113,9 +113,9 @@
                                                 {"fret": 9, "string": 1, "color": "blue", "label": "M3"}
                                                ], "title": "" },
 
-    { "startFret": 2, "endFret": 5, "notes": [{"fret": 5, "string": 6, "color": "red", "label": "R"},
-                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
-                                              {"fret": 2, "string": 4, "color": "blue", "label": "P5"},
+    { "startFret": 2, "endFret": 5, "notes": [{"fret": 5, "string": 6, "color": "green", "label": "R"},
+                                              {"fret": "X", "string": 5, "color": "green", "label": ""},
+                                              {"fret": 2, "string": 4, "color": "green", "label": "P5"},
                                               {"fret": 2, "string": 3, "color": "red", "label": "R"},
                                               {"fret": 2, "string": 2, "color": "blue", "label": "M3"},
                                               {"fret": 4, "string": 1, "color": "blue", "label": "M7"}
@@ -215,18 +215,6 @@
                                               {"fret": 6, "string": 3, "color": "blue", "label": "M3"},
                                               {"fret": 5, "string": 2, "color": "blue", "label": "P5"},
                                               {"fret": 4, "string": 1, "color": "blue", "label": "M7"}
-                                             ], "title": "" },
-    null,
-    null,
-    null,
-    null,
-
-    { "startFret": 14, "endFret": 16, "notes": [{"fret": "X", "string": 6, "color": "red", "label": ""},
-                                              {"fret": "X", "string": 5, "color": "red", "label": ""},
-                                              {"fret": "X", "string": 4, "color": "red", "label": ""},
-                                              {"fret": 14, "string": 3, "color": "red", "label": "R"},
-                                              {"fret": 14, "string": 2, "color": "blue", "label": "M3"},
-                                              {"fret": 16, "string": 1, "color": "blue", "label": "M7"}
                                              ], "title": "" },
     null,
     null,
