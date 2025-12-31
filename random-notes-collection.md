@@ -1,64 +1,29 @@
 # Random notes
 
-This section contains notes that I made that are either incompelte or not fully formatted and formulated out yet.
-
-## Random older notes
-
-Major:
-- Major scale: W W H W W W H
-- Major scale: Maj Min Min Maj Maj Min Dim
-- Maj: Root/ Major 3rd/ Perfect 5th OR Root/ Major 3rd, on top of that Minor 3rd
-- GMaj: Maj third (4 semitones) + minor third (three semi tones) --> Maj third + perfect fifth (7 semitones)
-- AMin: Min third (4 semitones) + major third (three semi tones) --> Min third + perfect fifth (7 semitones)
-- Maj7: Maj Chord as base, and 11 semitones/ one semitone below octave/ Maj third on top of perfect fifth
-
-Minor:
-- Minor scale: W H W W H W W
-- Minor scale: Min Dim Maj Min Min Maj Maj
-- Min: Root/ Minor 3rd/ Perfect 5th OR Root/ Minor 3rd, on top of that Major 3rd
-- Min7: Min Chord as base, and 10 semitones/ two semitones below octave/ Min third on top of perfect fifth
-
-Same pattern with Maj7 Min7 Min7 Maj7 7 Min7 Min7b5
-
-Minor scale to relative major scale: 3rd note of minor scale because of the overflow over Locrian back to ionian
-
-For every mode, find the relative major mode. Now, for that major mode, find the 3 minor chords. The minor pentatonics of those chords should sound OK over the original mode, depending on context
-
-Major modes: Ionian/ Lydian/ Mixolydian
-Minor modes: Aeolian/ Dorian/ Phrygian/ Locrian
---> Classified based on their 3rd scale degree: Only 3 semitones from root to 3rd note in scale for minor scales
-
-e.g. Dim: Root/ Minor Third/ Dim Fifth (Six instead of 7 semitones) OR Root/ Minor 3rd/ Minor 3rd on top of Minor 3rd
-
-e.g. Dim7: Diminished 7th above the root (9 semitones above the root) OR again Minor 3rd on top of last Minor 3rd // 3 semitones below octave
---> Only in harmonic minor scales
-
-Min7b5: half-diminished
-root + minor third + diminished fifth + minor seventh --> Diminished chord + minor 7th (10 semitones above root)/ two semitones below octave/ Min third on top of diminished fifth
----> Can only be constructed from diminshed chords on, meaning that key contains one or none?
----> Only in locrian as it is the 1st degree there? What about the other modes?
-
-e.g. Dom7th chords: Major Chord base with flat 7th on top/ 2 semitones below octave of root --> 'simple' 7th chords
---> How important is Dom 7th? Only in Mixolydian/ for Mixolydian sound?
-
-maj7#5: only harmonic minor
-minmaj7: only harmonic minor
+This section contains notes that I made that are either incomplete or not fully formatted and formulated out yet.
 
 
 ## Finding more chords fitting to mode-specific vamp
 
-In order to find more chords here:
-Take 4th & 5th chord of relative major scale + root of original scale in bass. Next, for those 2 major chords, find the 2 relativ minor chords (3 semitones below). Those will sound OK as well.
-Additionally, take the chord that defines the sound of the scale:
-- Ionian:      Major 3rd/ 7th         // 3rd and 7th scale degree
-- Dorian:      Major 6th              // 6th scale degree
-- Phrygian:    Flat 2nd scale degree  // 2nd scale degree
-- Lydian:      Raised 4th             // 4th scale degree
-- Mixolydian:  Flattened 7th          // 7th scale degree
-- Aeolian:							// 6th?
-- Locrian:     Flattened 5th  		// 5th scale degree
+In order to find a characteristic two-chord progression for any mode, do the following:
+- Find relative major scale
+- Take 4th & 5th chord of relative major scale + root of original scale in bass.
+  - This results in 2 major chords with the original scale root as bass note.
 
+- In order to find more chords here:
+- Take 4th & 5th chord of relative major scale + root of original scale in bass. Next, for those 2 major chords, find the 2 relativ minor chords (3 semitones below). Those will sound OK as well.
 
+***TODO***: Additionally, take the chord that defines the sound of the scale:
+
+| Mode       | Characteristic chord  | Explanation              |
+|------------|-----------------------|--------------------------|
+| Ionian     | Major 3rd/ 7th        | 3rd and 7th scale degree |
+| Dorian     | Major 6th             | 6th scale degree         |
+| Phrygian   | Flat 2nd scale degree | 2nd scale degree         |
+| Lydian     | Raised 4th            | 4th scale degree         |
+| Mixolydian | lattened 7th          | 7th scale degree         |
+| Aeolian    | 6th?                  | 6th?                     |
+| Locrian    | Flattened 5th         | 5th scale degree         |
 
 Does that mean a e.g. Phrygian chord progression should consist of 4th & 5th chord of relative major scale (--> 2 major chords making it 'Phrygian' with original root in bass) + second degree chords?
 (thanks google, 2nd degree is lowered in phrygian) Question: (AbMaj is already the 2nd degree)?

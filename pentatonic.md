@@ -78,3 +78,7 @@
   ]
 }
 ```
+
+# Finding well-sounding pentatonic over mode
+
+For any mode, find the relative major mode. Now, for that major mode, find the 3 minor chords. The minor pentatonics of those chords should sound OK over the original mode, depending on context.

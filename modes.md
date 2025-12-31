@@ -1,5 +1,20 @@
 # Guitar modes
 ## Church modes
+
+**Minor/ Major classification of modes:**
+
+Classified based on their 3rd scale degree: Only 3 semitones from root to 3rd note in scale for minor scales, resulting in the following classification:
+
+- **Major modes: Ionian/ Lydian/ Mixolydian**
+- **Minor modes: Aeolian/ Dorian/ Phrygian/ Locrian**
+
+**Characteristic mode sound:**
+
+In order to find a characteristic two-chord progression for any mode, do the following:
+- Find relative major scale
+- Take 4th & 5th chord of relative major scale + root of original scale in bass.
+  - This results in 2 major chords with the original scale root as bass note, allowing to capture the sound of the mode when improvising over this vamp.
+
 ### Root note dictates modes (e.g. A Ionian/ A Dorian/ ...)
 ```fretboard-grid
 {
