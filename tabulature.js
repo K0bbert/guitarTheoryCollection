@@ -81,6 +81,28 @@
     }
 
     /**
+     * Count how many notes are in a content string
+     * Examples: "2h3" = 2 notes, "4s6" = 2 notes, "5" = 1 note, "12p10" = 2 notes
+     */
+    function countNotesInContent(content) {
+        // Match pattern: number followed by technique letter (h, p, s, b, etc.) followed by number
+        const techniquePattern = /\d+[hpsb]\d+/g;
+        const matches = content.match(techniquePattern);
+
+        if (matches && matches.length > 0) {
+            // Each match like "2h3" contains 2 notes
+            return matches.length * 2;
+        }
+
+        // Check if there's at least one number (single note)
+        if (/\d+/.test(content)) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    /**
      * Identify vertical groupings in the tablature
      * A group represents content that appears at the same horizontal position across strings
      */
@@ -149,12 +171,29 @@
             // Check if this group has actual note content (not just dashes)
             const hasNotes = groupContent.some(c => c !== '-' && c !== '|');
 
+            // Count maximum notes in any single string (for multi-note techniques)
+            // For a chord (multiple strings), each string has 1 note, so max is 1
+            // For "2h3" on one string, that string has 2 notes, so max is 2
+            let noteCount = 0;
+            if (hasNotes) {
+                for (const c of groupContent) {
+                    if (c !== '-' && c !== '|') {
+                        const count = countNotesInContent(c);
+                        if (count > 1) {
+                            console.log('Found multi-note content:', c, 'count:', count);
+                        }
+                        noteCount = Math.max(noteCount, count);
+                    }
+                }
+            }
+
             groups.push({
                 start: i,
                 end: groupEnd,
                 type: type,
                 content: groupContent,
-                hasNotes: hasNotes
+                hasNotes: hasNotes,
+                noteCount: noteCount
             });
 
             i = groupEnd;
@@ -183,12 +222,41 @@
                     rhythmIndex++;
                 }
 
-                if (rhythmIndex < rhythms.length) {
-                    group.rhythm = rhythms[rhythmIndex].symbol;
-                    group.rhythmIndex = rhythmIndex;
-                    rhythmIndex++;
-                    noteGroupIndex = i;
+                // Collect rhythms for all notes in this group
+                const groupRhythms = [];
+                const notesNeeded = group.noteCount || 1;
+
+                if (notesNeeded > 1) {
+                    console.log('Group needs', notesNeeded, 'rhythms. Content:', group.content, 'noteCount:', group.noteCount);
                 }
+
+                for (let n = 0; n < notesNeeded && rhythmIndex < rhythms.length; n++) {
+                    // Skip any pauses
+                    while (rhythmIndex < rhythms.length && rhythms[rhythmIndex].isPause) {
+                        rhythmIndex++;
+                    }
+
+                    if (rhythmIndex < rhythms.length) {
+                        groupRhythms.push(rhythms[rhythmIndex].symbol);
+                        if (notesNeeded > 1) {
+                            console.log('  Collected rhythm', n, ':', rhythms[rhythmIndex].symbol);
+                        }
+                        rhythmIndex++;
+                    }
+                }
+
+                if (groupRhythms.length > 0) {
+                    group.rhythms = groupRhythms;
+                    group.rhythm = groupRhythms[0]; // Keep first rhythm for backward compatibility
+                    group.rhythmIndex = rhythmIndex - groupRhythms.length;
+
+                    // Debug: log multi-note rhythm assignments
+                    if (groupRhythms.length > 1) {
+                        console.log('Multi-note group:', group.content, 'noteCount:', group.noteCount, 'rhythms:', groupRhythms);
+                    }
+                }
+
+                noteGroupIndex = i;
             }
         }
 
@@ -266,6 +334,10 @@
         const tokenLines = Array(lines.length).fill(null).map(() => []);
 
         for (const group of groups) {
+            if (group.rhythms && group.rhythms.length > 1) {
+                console.log('Processing group with multiple rhythms:', group.rhythms, 'content:', group.content);
+            }
+
             for (let stringIndex = 0; stringIndex < lines.length; stringIndex++) {
                 const content = group.content[stringIndex];
 
@@ -281,22 +353,32 @@
                     });
                 } else if (content === '-') {
                     // Empty position - render as dash, preserve rhythm from group
-                    tokenLines[stringIndex].push({
+                    const token = {
                         type: 'dash',
                         value: '-',
                         spacing: 'normal',
-                        rhythm: group.rhythm
-                    });
+                        rhythm: group.rhythm,
+                        rhythms: group.rhythms ? [...group.rhythms] : undefined  // Clone array to prevent sharing
+                    };
+                    if (stringIndex === 0 && group.rhythms && group.rhythms.length > 1) {
+                        console.log('Creating dash token on string 0 with rhythms:', token.rhythms);
+                    }
+                    tokenLines[stringIndex].push(token);
                 } else if (content === '|') {
                     // Bar position
                     tokenLines[stringIndex].push({type: 'bar', value: '|', rhythm: null});
                 } else {
-                    // Content (number, letter, symbol, etc.) - attach rhythm if present
-                    tokenLines[stringIndex].push({
+                    // Content (number, letter, symbol, etc.) - attach rhythm(s) if present
+                    const token = {
                         type: 'content',
                         value: content,
-                        rhythm: group.rhythm
-                    });
+                        rhythm: group.rhythm,
+                        rhythms: group.rhythms ? [...group.rhythms] : undefined  // Clone array to prevent sharing
+                    };
+                    if (stringIndex === 0 && group.rhythms && group.rhythms.length > 1) {
+                        console.log('Creating content token on string 0 with value:', content, 'rhythms:', token.rhythms);
+                    }
+                    tokenLines[stringIndex].push(token);
                 }
             }
         }
@@ -722,6 +804,10 @@
             const token = tokenIndex < tokens.length ? tokens[tokenIndex] : {type: 'dash', value: '-'};
             const x = currentX;
 
+            if (stringIndex === 0) {
+                console.log('Token', tokenIndex, ':', 'inBounds=', (tokenIndex < tokens.length), 'type=', token.type, 'value=', token.value, 'rhythms=', token.rhythms);
+            }
+
             if (token.type === 'bar') {
                 // Render vertical bar
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -800,17 +886,28 @@
                 }
 
                 // Render rhythm stem on the first string
-                if (stringIndex === 0 && token.rhythm) {
-                    const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
-                    const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
-                    const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
+                if (stringIndex === 0 && (token.rhythm || token.rhythms)) {
+                    console.log('String 0 token at x=' + x + ':', 'value=' + token.value, 'rhythm=' + token.rhythm, 'rhythms=', token.rhythms);
+                    // Check if this token has multiple rhythms (multi-note technique)
+                    if (token.rhythms && token.rhythms.length > 1) {
+                        // Render multiple rhythm stems for multi-note techniques like 2h3
+                        console.log('>>> Rendering multi-note rhythm at x=' + x + ', rhythms:', token.rhythms);
+                        token.rhythms.forEach((rhythm, idx) => {
+                            const stemX = x + (idx * TAB_CONFIG.characterWidth * 0.5); // Closer spacing
+                            renderRhythmStem(svg, stemX, rhythm, false, false, null);
+                        });
+                    } else if (token.rhythm) {
+                        const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
+                        const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
+                        const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                    renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX);
+                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX);
 
-                    if (isLastOfTriplet) {
-                        tripletGroupStart = null;
-                        tripletCount = 0;
-                        tripletStemPositions = [];
+                        if (isLastOfTriplet) {
+                            tripletGroupStart = null;
+                            tripletCount = 0;
+                            tripletStemPositions = [];
+                        }
                     }
                 }
 
@@ -847,18 +944,32 @@
                     tripletStemPositions = [];
                 }
 
-                // Render rhythm stem on the first string
-                if (stringIndex === 0 && token.rhythm) {
-                    const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
-                    const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
-                    const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
+                // Render rhythm stem(s) on the first string
+                if (stringIndex === 0 && (token.rhythm || token.rhythms)) {
+                    console.log('String 0 token at x=' + x + ':', 'value=' + token.value, 'rhythm=' + token.rhythm, 'rhythms=', token.rhythms);
+                    // Check if this token has multiple rhythms (multi-note technique)
+                    // Only render multiple stems if we have multiple rhythms
+                    if (token.rhythms && token.rhythms.length > 1) {
+                        // Render multiple rhythm stems for multi-note techniques like 2h3
+                        // Space each rhythm stem closer together (60% of character width)
+                        console.log('>>> Rendering multi-note rhythm at x=' + x + ', rhythms:', token.rhythms);
+                        token.rhythms.forEach((rhythm, idx) => {
+                            const stemX = x + (idx * TAB_CONFIG.characterWidth * 0.5);
+                            renderRhythmStem(svg, stemX, rhythm, false, false, null);
+                        });
+                    } else if (token.rhythm) {
+                        // Single rhythm for single note
+                        const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
+                        const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
+                        const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                    renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX);
+                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX);
 
-                    if (isLastOfTriplet) {
-                        tripletGroupStart = null;
-                        tripletCount = 0;
-                        tripletStemPositions = [];
+                        if (isLastOfTriplet) {
+                            tripletGroupStart = null;
+                            tripletCount = 0;
+                            tripletStemPositions = [];
+                        }
                     }
                 }
             }
