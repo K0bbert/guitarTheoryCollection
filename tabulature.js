@@ -40,12 +40,20 @@
 
         const rhythms = [];
         let i = 0;
+        let barCount = 0;
 
         while (i < rhythmLine.length) {
             const char = rhythmLine[i];
 
-            // Skip bars, dashes, and spaces
-            if (char === '|' || char === '-' || char === ' ') {
+            // Track bar positions
+            if (char === '|') {
+                barCount++;
+                i++;
+                continue;
+            }
+
+            // Skip dashes and spaces
+            if (char === '-' || char === ' ') {
                 i++;
                 continue;
             }
@@ -76,7 +84,8 @@
             rhythms.push({
                 symbol: symbol,
                 position: i,
-                isPause: isPause
+                isPause: isPause,
+                barIndex: barCount  // Track which bar this rhythm belongs to
             });
 
             i = j;
@@ -215,110 +224,88 @@
     function assignRhythmsToGroups(groups, rhythms) {
         if (!rhythms || rhythms.length === 0) return;
 
-        let rhythmIndex = 0;
-        let noteGroupIndex = 0;
+        let currentBarIndex = 0;
 
-        // First pass: assign non-pause rhythms to note groups
-        for (let i = 0; i < groups.length && rhythmIndex < rhythms.length; i++) {
-            const group = groups[i];
-
-            if (group.hasNotes) {
-                // Find next non-pause rhythm
-                while (rhythmIndex < rhythms.length && rhythms[rhythmIndex].isPause) {
-                    rhythmIndex++;
-                }
-
-                // Collect rhythms for all notes in this group
-                const groupRhythms = [];
-                const notesNeeded = group.noteCount || 1;
-
-                if (notesNeeded > 1) {
-                    console.log('Group needs', notesNeeded, 'rhythms. Content:', group.content, 'noteCount:', group.noteCount);
-                }
-
-                for (let n = 0; n < notesNeeded && rhythmIndex < rhythms.length; n++) {
-                    // Skip any pauses
-                    while (rhythmIndex < rhythms.length && rhythms[rhythmIndex].isPause) {
-                        rhythmIndex++;
-                    }
-
-                    if (rhythmIndex < rhythms.length) {
-                        groupRhythms.push(rhythms[rhythmIndex].symbol);
-                        if (notesNeeded > 1) {
-                            console.log('  Collected rhythm', n, ':', rhythms[rhythmIndex].symbol);
-                        }
-                        rhythmIndex++;
-                    }
-                }
-
-                if (groupRhythms.length > 0) {
-                    group.rhythms = groupRhythms;
-                    group.rhythm = groupRhythms[0]; // Keep first rhythm for backward compatibility
-                    group.rhythmIndex = rhythmIndex - groupRhythms.length;
-
-                    // Debug: log multi-note rhythm assignments
-                    if (groupRhythms.length > 1) {
-                        console.log('Multi-note group:', group.content, 'noteCount:', group.noteCount, 'rhythms:', groupRhythms);
-                    }
-                }
-
-                noteGroupIndex = i;
-            }
-        }
-
-        // Second pass: assign pauses to gaps
-        rhythmIndex = 0;
-        let lastNoteGroupIndex = -1;
-
+        // First, tag all groups with their bar index
         for (let i = 0; i < groups.length; i++) {
-            const group = groups[i];
+            if (groups[i].type === 'bar') {
+                currentBarIndex++;
+            }
+            groups[i].barIndex = currentBarIndex;
+        }
 
-            if (group.hasNotes) {
-                // Check for pauses between last note and this note
-                const pausesToInsert = [];
+        // Process each bar separately
+        for (let barIdx = 0; barIdx <= currentBarIndex; barIdx++) {
+            // Get all rhythms for this bar in order (preserving pauses and notes sequence)
+            const barRhythms = rhythms.filter(r => r.barIndex === barIdx);
+            
+            // Get groups in this bar
+            const barGroups = groups.filter(g => g.barIndex === barIdx);
+            
+            let rhythmIdx = 0;
+            let lastNoteGroupIdx = -1;
 
-                while (rhythmIndex < rhythms.length) {
-                    if (!rhythms[rhythmIndex].isPause) {
-                        // This is the rhythm for the current note group
-                        rhythmIndex++;
-                        break;
-                    } else {
-                        // Collect pause
-                        pausesToInsert.push(rhythms[rhythmIndex].symbol);
-                        rhythmIndex++;
-                    }
+            // Process each group in sequence
+            for (let i = 0; i < barGroups.length; i++) {
+                const group = barGroups[i];
+
+                if (group.type === 'bar') {
+                    continue;
                 }
 
-                // If we have pauses, assign them to the gap before this note
-                if (pausesToInsert.length > 0) {
-                    // Find the gap before this note group
-                    for (let j = Math.max(0, lastNoteGroupIndex + 1); j < i; j++) {
-                        if (groups[j].type === 'gap') {
-                            groups[j].pauses = pausesToInsert;
-                            break;
+                if (group.hasNotes) {
+                    // Collect any pauses that come before this note
+                    const pausesToInsert = [];
+                    while (rhythmIdx < barRhythms.length && barRhythms[rhythmIdx].isPause) {
+                        pausesToInsert.push(barRhythms[rhythmIdx].symbol);
+                        rhythmIdx++;
+                    }
+
+                    // If we have pauses, assign them to the gap before this note
+                    if (pausesToInsert.length > 0) {
+                        // Find the gap before this note group
+                        for (let j = Math.max(0, lastNoteGroupIdx + 1); j < i; j++) {
+                            if (barGroups[j].type === 'gap') {
+                                barGroups[j].pauses = pausesToInsert;
+                                break;
+                            }
                         }
                     }
+
+                    // Now collect rhythms for the notes in this group
+                    const groupRhythms = [];
+                    const notesNeeded = group.noteCount || 1;
+
+                    for (let n = 0; n < notesNeeded && rhythmIdx < barRhythms.length; n++) {
+                        if (!barRhythms[rhythmIdx].isPause) {
+                            groupRhythms.push(barRhythms[rhythmIdx].symbol);
+                            rhythmIdx++;
+                        }
+                    }
+
+                    if (groupRhythms.length > 0) {
+                        group.rhythms = groupRhythms;
+                        group.rhythm = groupRhythms[0];
+                    }
+
+                    lastNoteGroupIdx = i;
                 }
-
-                lastNoteGroupIndex = i;
             }
-        }
 
-        // Third pass: handle any remaining pauses after all notes
-        const remainingPauses = [];
-        while (rhythmIndex < rhythms.length) {
-            if (rhythms[rhythmIndex].isPause) {
-                remainingPauses.push(rhythms[rhythmIndex].symbol);
+            // Handle any remaining pauses at the end of the bar
+            const remainingPauses = [];
+            while (rhythmIdx < barRhythms.length && barRhythms[rhythmIdx].isPause) {
+                remainingPauses.push(barRhythms[rhythmIdx].symbol);
+                rhythmIdx++;
             }
-            rhythmIndex++;
-        }
 
-        if (remainingPauses.length > 0) {
-            // Assign to the first gap after the last note, or the last gap
-            for (let j = lastNoteGroupIndex + 1; j < groups.length; j++) {
-                if (groups[j].type === 'gap') {
-                    groups[j].pauses = remainingPauses;
-                    break;
+            if (remainingPauses.length > 0) {
+                // Assign to the last gap in this bar
+                for (let j = barGroups.length - 1; j >= 0; j--) {
+                    if (barGroups[j].type === 'gap') {
+                        barGroups[j].pauses = remainingPauses;
+                        break;
+                    }
                 }
             }
         }
