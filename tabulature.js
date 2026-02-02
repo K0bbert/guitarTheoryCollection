@@ -656,14 +656,14 @@
             stroke.setAttribute('stroke-linecap', 'round');
             group.appendChild(stroke);
 
-            // First filled flag/blob at the top
+            // First flag
             const flag1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const d1 = `M ${centerX - 3} ${centerY - 7} q 2 -1 4 0 q 2 2 0 4 q -2 1 -4 0 Z`;
+            const d1 = `M ${centerX + 3} ${centerY + 7} q 3 3 3 6 q -1.5 -2 -3 -4 Z`;
             flag1.setAttribute('d', d1);
             flag1.setAttribute('fill', TAB_CONFIG.stemColor);
             group.appendChild(flag1);
 
-            // Second filled flag/blob below the first
+            // Second flag
             const flag2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             const d2 = `M ${centerX + 3} ${centerY + 12} q 3 3 3 6 q -1.5 -2 -3 -4 Z`;
             flag2.setAttribute('d', d2);
@@ -1660,6 +1660,13 @@
                     renderBeamedNotes(svg, sixteenthNoteGroup, 's');
                 } else {
                     renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
+                }
+            }
+            if (thirtySecondNoteGroup.length > 0) {
+                if (thirtySecondNoteGroup.length >= 2) {
+                    renderBeamedNotes(svg, thirtySecondNoteGroup, 'f');
+                } else {
+                    renderRhythmStem(svg, thirtySecondNoteGroup[0].x, thirtySecondNoteGroup[0].rhythm, false, false, null, false);
                 }
             }
         }
