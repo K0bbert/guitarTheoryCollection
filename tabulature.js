@@ -90,13 +90,14 @@
      * Examples: "2h3" = 2 notes, "4s6" = 2 notes, "5" = 1 note, "12p10" = 2 notes
      */
     function countNotesInContent(content) {
-        // Match pattern: number followed by technique letter (h, p, s, b, etc.) followed by number
-        const techniquePattern = /\d+[hpsb]\d+/g;
-        const matches = content.match(techniquePattern);
+        // Check for multi-note technique pattern (e.g., "4s6s7", "2h3p5")
+        const multiNotePattern = /\d+(?:[hpsb]\d+)+/;
 
-        if (matches && matches.length > 0) {
-            // Each match like "2h3" contains 2 notes
-            return matches.length * 2;
+        if (multiNotePattern.test(content)) {
+            // Count each number in the pattern
+            // Match all sequences of digits
+            const numbers = content.match(/\d+/g);
+            return numbers ? numbers.length : 0;
         }
 
         // Check if there's at least one number (single note)
@@ -343,47 +344,99 @@
                 console.log('Processing group with multiple rhythms:', group.rhythms, 'content:', group.content);
             }
 
-            for (let stringIndex = 0; stringIndex < lines.length; stringIndex++) {
-                const content = group.content[stringIndex];
+            // Check if this group has multi-note technique content
+            const multiNotePattern = /\d+(?:[hpsb]\d+)+/;
+            const hasMultiNote = group.content.some(c => c && c !== '-' && c !== '|' && multiNotePattern.test(c));
 
-                if (group.type === 'gap') {
-                    // Gap - track the size for wider spacing
-                    const spacing = group.gapSize > 1 ? 'wide' : 'normal';
-                    tokenLines[stringIndex].push({
-                        type: 'gap',
-                        value: '-',
-                        spacing: spacing,
-                        rhythm: null,
-                        pauses: group.pauses || null
-                    });
-                } else if (content === '-') {
-                    // Empty position - render as dash, preserve rhythm from group
-                    const token = {
-                        type: 'dash',
-                        value: '-',
-                        spacing: 'normal',
-                        rhythm: group.rhythm,
-                        rhythms: group.rhythms ? [...group.rhythms] : undefined  // Clone array to prevent sharing
-                    };
-                    if (stringIndex === 0 && group.rhythms && group.rhythms.length > 1) {
-                        console.log('Creating dash token on string 0 with rhythms:', token.rhythms);
+            if (hasMultiNote && group.rhythms && group.rhythms.length > 1) {
+                // Split multi-note techniques into separate character tokens
+                // Find max length of content across all strings
+                const maxLength = Math.max(...group.content.map(c => (c && c !== '-' && c !== '|') ? c.length : 0));
+
+                let rhythmIndex = 0;
+
+                for (let charPos = 0; charPos < maxLength; charPos++) {
+                    // First, check if ANY string has a digit at this position
+                    let hasDigitAtPos = false;
+                    for (let checkString = 0; checkString < lines.length; checkString++) {
+                        const checkContent = group.content[checkString];
+                        if (checkContent && checkContent !== '-' && checkContent !== '|' && charPos < checkContent.length) {
+                            if (/\d/.test(checkContent[charPos])) {
+                                hasDigitAtPos = true;
+                                break;
+                            }
+                        }
                     }
-                    tokenLines[stringIndex].push(token);
-                } else if (content === '|') {
-                    // Bar position
-                    tokenLines[stringIndex].push({type: 'bar', value: '|', rhythm: null});
-                } else {
-                    // Content (number, letter, symbol, etc.) - attach rhythm(s) if present
-                    const token = {
-                        type: 'content',
-                        value: content,
-                        rhythm: group.rhythm,
-                        rhythms: group.rhythms ? [...group.rhythms] : undefined  // Clone array to prevent sharing
-                    };
-                    if (stringIndex === 0 && group.rhythms && group.rhythms.length > 1) {
-                        console.log('Creating content token on string 0 with value:', content, 'rhythms:', token.rhythms);
+
+                    // Get the rhythm for this position if it has a digit
+                    let positionRhythm = null;
+                    if (hasDigitAtPos && rhythmIndex < group.rhythms.length) {
+                        positionRhythm = group.rhythms[rhythmIndex];
+                        rhythmIndex++;
                     }
-                    tokenLines[stringIndex].push(token);
+
+                    // Create tokens for all strings at this position
+                    for (let stringIndex = 0; stringIndex < lines.length; stringIndex++) {
+                        const content = group.content[stringIndex];
+                        let charValue = '-';
+
+                        if (content && content !== '-' && content !== '|' && charPos < content.length) {
+                            charValue = content[charPos];
+                        }
+
+                        // Assign rhythm only on string 0 for notes
+                        const rhythm = (stringIndex === 0) ? positionRhythm : null;
+
+                        if (charValue === '-') {
+                            tokenLines[stringIndex].push({
+                                type: 'dash',
+                                value: '-',
+                                spacing: 'normal',
+                                rhythm: rhythm
+                            });
+                        } else {
+                            tokenLines[stringIndex].push({
+                                type: 'content',
+                                value: charValue,
+                                rhythm: rhythm
+                            });
+                        }
+                    }
+                }
+            } else {
+                // Normal processing for single-note groups
+                for (let stringIndex = 0; stringIndex < lines.length; stringIndex++) {
+                    const content = group.content[stringIndex];
+
+                    if (group.type === 'gap') {
+                        // Gap - track the size for wider spacing
+                        const spacing = group.gapSize > 1 ? 'wide' : 'normal';
+                        tokenLines[stringIndex].push({
+                            type: 'gap',
+                            value: '-',
+                            spacing: spacing,
+                            rhythm: null,
+                            pauses: group.pauses || null
+                        });
+                    } else if (content === '-') {
+                        // Empty position - render as dash, preserve rhythm from group
+                        tokenLines[stringIndex].push({
+                            type: 'dash',
+                            value: '-',
+                            spacing: 'normal',
+                            rhythm: group.rhythm
+                        });
+                    } else if (content === '|') {
+                        // Bar position
+                        tokenLines[stringIndex].push({type: 'bar', value: '|', rhythm: null});
+                    } else {
+                        // Content (number, letter, symbol, etc.) - attach rhythm if present
+                        tokenLines[stringIndex].push({
+                            type: 'content',
+                            value: content,
+                            rhythm: group.rhythm
+                        });
+                    }
                 }
             }
         }
@@ -1110,29 +1163,33 @@
                 line.setAttribute('class', 'tab-line-segment');
                 group.appendChild(line);
 
-                // Track triplet groups
-                if (stringIndex === 0 && isTriplet(token.rhythm)) {
-                    if (tripletGroupStart === null) {
-                        tripletGroupStart = x;
-                        tripletCount = 1;
-                        tripletStemPositions = [x + TAB_CONFIG.characterWidth / 2];
-                    } else {
-                        tripletCount++;
-                        tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
+                // Track triplet groups (skip tokens without rhythms)
+                if (stringIndex === 0 && token.rhythm) {
+                    if (isTriplet(token.rhythm)) {
+                        if (tripletGroupStart === null) {
+                            tripletGroupStart = x;
+                            tripletCount = 1;
+                            tripletStemPositions = [x + TAB_CONFIG.characterWidth / 2];
+                        } else {
+                            tripletCount++;
+                            tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
+                        }
+                    } else if (tripletGroupStart !== null) {
+                        // Non-triplet rhythm encountered, reset triplet tracking
+                        tripletGroupStart = null;
+                        tripletCount = 0;
+                        tripletStemPositions = [];
                     }
-                } else if (stringIndex === 0 && !isTriplet(token.rhythm) && tripletGroupStart !== null) {
-                    tripletGroupStart = null;
-                    tripletCount = 0;
-                    tripletStemPositions = [];
                 }
 
                 // Render rhythm stem on the first string
-                if (stringIndex === 0 && (token.rhythm || token.rhythms)) {
-                    console.log('String 0 DASH token at x=' + x + ':', 'value=' + token.value, 'rhythm=' + token.rhythm, 'rhythms=', token.rhythms);
+                if (stringIndex === 0 && token.rhythm) {
+                    const baseRhythm = getBaseRhythm(token.rhythm);
+                    const hasDot = token.rhythm.includes('.');
 
-                    // Check if this token has multiple rhythms (multi-note technique)
-                    if (token.rhythms && token.rhythms.length > 1) {
-                        // Finalize any pending beaming groups before multi-note technique
+                    // Handle triplets separately (they have their own beaming)
+                    if (isTriplet(token.rhythm)) {
+                        // Finalize any pending beaming groups before triplet
                         if (eighthNoteGroup.length > 0) {
                             if (eighthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, eighthNoteGroup, 'e');
@@ -1150,112 +1207,81 @@
                             sixteenthNoteGroup = [];
                         }
 
-                        // Render multiple rhythm stems for multi-note techniques like 2h3
-                        console.log('>>> Rendering multi-note rhythm at x=' + x + ', rhythms:', token.rhythms);
-                        token.rhythms.forEach((rhythm, idx) => {
-                            const stemX = x + (idx * TAB_CONFIG.characterWidth * 0.5); // Closer spacing
-                            renderRhythmStem(svg, stemX, rhythm, false, false, null, false);
-                        });
-                    } else if (token.rhythm) {
-                        const baseRhythm = getBaseRhythm(token.rhythm);
-                        const hasDot = token.rhythm.includes('.');
+                        // Render triplet
+                        const isFirstOfTriplet = (tripletCount === 1);
+                        const isLastOfTriplet = (tripletCount === 3);
+                        const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                        // Handle triplets separately (they have their own beaming)
-                        if (isTriplet(token.rhythm)) {
-                            // Finalize any pending beaming groups before triplet
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
-                            }
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
-                            }
+                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
 
-                            // Render triplet
-                            const isFirstOfTriplet = (tripletCount === 1);
-                            const isLastOfTriplet = (tripletCount === 3);
-                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
-
-                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
-
-                            if (isLastOfTriplet) {
-                                tripletGroupStart = null;
-                                tripletCount = 0;
-                                tripletStemPositions = [];
-                            }
+                        if (isLastOfTriplet) {
+                            tripletGroupStart = null;
+                            tripletCount = 0;
+                            tripletStemPositions = [];
                         }
-                        // Handle eighth note beaming
-                        else if (baseRhythm === 'e') {
-                            // Finalize any pending sixteenth note group
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
+                    }
+                    // Handle eighth note beaming
+                    else if (baseRhythm === 'e') {
+                        // Finalize any pending sixteenth note group
+                        if (sixteenthNoteGroup.length > 0) {
+                            if (sixteenthNoteGroup.length >= 2) {
+                                renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                            } else {
+                                renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            sixteenthNoteGroup = [];
+                        }
 
-                            eighthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+                        eighthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
 
-                            // Finalize group if it reaches 2 notes
+                        // Finalize group if it reaches 2 notes
+                        if (eighthNoteGroup.length >= 2) {
+                            renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                            eighthNoteGroup = [];
+                        }
+                    }
+                    // Handle sixteenth note beaming
+                    else if (baseRhythm === 's') {
+                        // Finalize any pending eighth note group
+                        if (eighthNoteGroup.length > 0) {
                             if (eighthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                eighthNoteGroup = [];
+                            } else {
+                                renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            eighthNoteGroup = [];
                         }
-                        // Handle sixteenth note beaming
-                        else if (baseRhythm === 's') {
-                            // Finalize any pending eighth note group
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
+
+                        sixteenthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+
+                        // Finalize group if it reaches 4 notes
+                        if (sixteenthNoteGroup.length >= 4) {
+                            renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                            sixteenthNoteGroup = [];
+                        }
+                    }
+                    // Other note types - finalize beaming groups and render normally
+                    else {
+                        // Finalize any pending beaming groups
+                        if (eighthNoteGroup.length > 0) {
+                            if (eighthNoteGroup.length >= 2) {
+                                renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                            } else {
+                                renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
                             }
-
-                            sixteenthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
-
-                            // Finalize group if it reaches 4 notes
-                            if (sixteenthNoteGroup.length >= 4) {
+                            eighthNoteGroup = [];
+                        }
+                        if (sixteenthNoteGroup.length > 0) {
+                            if (sixteenthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                sixteenthNoteGroup = [];
+                            } else {
+                                renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            sixteenthNoteGroup = [];
                         }
-                        // Other note types - finalize beaming groups and render normally
-                        else {
-                            // Finalize any pending beaming groups
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
-                            }
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
-                            }
 
-                            // Render non-beamable note (w, h, q, etc.)
-                            renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
-                        }
+                        // Render non-beamable note (w, h, q, etc.)
+                        renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
                     }
                 }
 
@@ -1276,30 +1302,33 @@
                 text.textContent = token.value;
                 group.appendChild(text);
 
-                // Track triplet groups
-                if (stringIndex === 0 && isTriplet(token.rhythm)) {
-                    if (tripletGroupStart === null) {
-                        tripletGroupStart = x;
-                        tripletCount = 1;
-                        tripletStemPositions = [x + TAB_CONFIG.characterWidth / 2];
-                    } else {
-                        tripletCount++;
-                        tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
+                // Track triplet groups (skip tokens without rhythms)
+                if (stringIndex === 0 && token.rhythm) {
+                    if (isTriplet(token.rhythm)) {
+                        if (tripletGroupStart === null) {
+                            tripletGroupStart = x;
+                            tripletCount = 1;
+                            tripletStemPositions = [x + TAB_CONFIG.characterWidth / 2];
+                        } else {
+                            tripletCount++;
+                            tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
+                        }
+                    } else if (tripletGroupStart !== null) {
+                        // Non-triplet rhythm encountered, reset triplet tracking
+                        tripletGroupStart = null;
+                        tripletCount = 0;
+                        tripletStemPositions = [];
                     }
-                } else if (stringIndex === 0 && !isTriplet(token.rhythm) && tripletGroupStart !== null) {
-                    tripletGroupStart = null;
-                    tripletCount = 0;
-                    tripletStemPositions = [];
                 }
 
-                // Render rhythm stem(s) on the first string
-                if (stringIndex === 0 && (token.rhythm || token.rhythms)) {
-                    console.log('String 0 token at x=' + x + ':', 'value=' + token.value, 'rhythm=' + token.rhythm, 'rhythms=', token.rhythms);
+                // Render rhythm stem on the first string (only for tokens with rhythm)
+                if (stringIndex === 0 && token.rhythm) {
+                    const baseRhythm = getBaseRhythm(token.rhythm);
+                    const hasDot = token.rhythm.includes('.');
 
-                    // Check if this token has multiple rhythms (multi-note technique)
-                    // Only render multiple stems if we have multiple rhythms
-                    if (token.rhythms && token.rhythms.length > 1) {
-                        // Finalize any pending beaming groups before multi-note technique
+                    // Handle triplets separately (they have their own beaming)
+                    if (isTriplet(token.rhythm)) {
+                        // Finalize any pending beaming groups before triplet
                         if (eighthNoteGroup.length > 0) {
                             if (eighthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, eighthNoteGroup, 'e');
@@ -1317,118 +1346,104 @@
                             sixteenthNoteGroup = [];
                         }
 
-                        // Render multiple rhythm stems for multi-note techniques like 2h3
-                        // Space each rhythm stem closer together (50% of character width)
-                        console.log('>>> Rendering multi-note rhythm at x=' + x + ', rhythms:', token.rhythms);
-                        token.rhythms.forEach((rhythm, idx) => {
-                            const stemX = x + (idx * TAB_CONFIG.characterWidth * 0.5);
-                            renderRhythmStem(svg, stemX, rhythm, false, false, null, false);
-                        });
-                    } else if (token.rhythm) {
-                        const baseRhythm = getBaseRhythm(token.rhythm);
-                        const hasDot = token.rhythm.includes('.');
+                        // Render triplet
+                        const isFirstOfTriplet = (tripletCount === 1);
+                        const isLastOfTriplet = (tripletCount === 3);
+                        const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                        // Handle triplets separately (they have their own beaming)
-                        if (isTriplet(token.rhythm)) {
-                            // Finalize any pending beaming groups before triplet
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
-                            }
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
-                            }
+                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
 
-                            // Render triplet
-                            const isFirstOfTriplet = (tripletCount === 1);
-                            const isLastOfTriplet = (tripletCount === 3);
-                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
-
-                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
-
-                            if (isLastOfTriplet) {
-                                tripletGroupStart = null;
-                                tripletCount = 0;
-                                tripletStemPositions = [];
-                            }
+                        if (isLastOfTriplet) {
+                            tripletGroupStart = null;
+                            tripletCount = 0;
+                            tripletStemPositions = [];
                         }
-                        // Handle eighth note beaming
-                        else if (baseRhythm === 'e') {
-                            // Finalize any pending sixteenth note group
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
+                    }
+                    // Handle eighth note beaming
+                    else if (baseRhythm === 'e') {
+                        // Finalize any pending sixteenth note group
+                        if (sixteenthNoteGroup.length > 0) {
+                            if (sixteenthNoteGroup.length >= 2) {
+                                renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                            } else {
+                                renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            sixteenthNoteGroup = [];
+                        }
 
-                            eighthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+                        eighthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
 
-                            // Finalize group if it reaches 2 notes
+                        // Finalize group if it reaches 2 notes
+                        if (eighthNoteGroup.length >= 2) {
+                            renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                            eighthNoteGroup = [];
+                        }
+                    }
+                    // Handle sixteenth note beaming
+                    else if (baseRhythm === 's') {
+                        // Finalize any pending eighth note group
+                        if (eighthNoteGroup.length > 0) {
                             if (eighthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                eighthNoteGroup = [];
+                            } else {
+                                renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            eighthNoteGroup = [];
                         }
-                        // Handle sixteenth note beaming
-                        else if (baseRhythm === 's') {
-                            // Finalize any pending eighth note group
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
+
+                        sixteenthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+
+                        // Finalize group if it reaches 4 notes
+                        if (sixteenthNoteGroup.length >= 4) {
+                            renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                            sixteenthNoteGroup = [];
+                        }
+                    }
+                    // Other note types - finalize beaming groups and render normally
+                    else {
+                        // Finalize any pending beaming groups
+                        if (eighthNoteGroup.length > 0) {
+                            if (eighthNoteGroup.length >= 2) {
+                                renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                            } else {
+                                renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
                             }
-
-                            sixteenthNoteGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
-
-                            // Finalize group if it reaches 4 notes
-                            if (sixteenthNoteGroup.length >= 4) {
+                            eighthNoteGroup = [];
+                        }
+                        if (sixteenthNoteGroup.length > 0) {
+                            if (sixteenthNoteGroup.length >= 2) {
                                 renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                sixteenthNoteGroup = [];
+                            } else {
+                                renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
                             }
+                            sixteenthNoteGroup = [];
                         }
-                        // Other note types - finalize beaming groups and render normally
-                        else {
-                            // Finalize any pending beaming groups
-                            if (eighthNoteGroup.length > 0) {
-                                if (eighthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
-                                } else {
-                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                eighthNoteGroup = [];
-                            }
-                            if (sixteenthNoteGroup.length > 0) {
-                                if (sixteenthNoteGroup.length >= 2) {
-                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
-                                } else {
-                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
-                                }
-                                sixteenthNoteGroup = [];
-                            }
 
-                            // Render non-beamable note (w, h, q, etc.)
-                            renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
-                        }
+                        // Render non-beamable note (w, h, q, etc.)
+                        renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
                     }
                 }
             }
 
-            currentX += TAB_CONFIG.characterWidth;
+            // Add extra spacing if the previous token was a number and current is a technique letter
+            // or vice versa (for multi-note techniques like "4s6")
+            let extraSpacing = 0;
+            if (tokenIndex > 0 && tokenIndex < tokens.length) {
+                const prevToken = tokens[tokenIndex - 1];
+                const currToken = token;
+
+                // Check if we're in a multi-note sequence: number followed by letter, or letter followed by number
+                const prevIsDigit = prevToken.value && /\d/.test(prevToken.value);
+                const currIsLetter = currToken.value && /[hpsb]/.test(currToken.value);
+                const prevIsLetter = prevToken.value && /[hpsb]/.test(prevToken.value);
+                const currIsDigit = currToken.value && /\d/.test(currToken.value);
+
+                if ((prevIsDigit && currIsLetter) || (prevIsLetter && currIsDigit)) {
+                    extraSpacing = 2; // Add 4px spacing between numbers and technique letters
+                }
+            }
+
+            currentX += TAB_CONFIG.characterWidth + extraSpacing;
         }
 
         // Finalize any remaining beaming groups at the end
