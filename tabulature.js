@@ -54,13 +54,18 @@
             let symbol = char;
             let j = i + 1;
 
-            // Check for pause indicator (e.g., "hp", "qp", "wp", "ep", "tp")
-            if (j < rhythmLine.length && rhythmLine[j] === 'p') {
+            // Check for triplet indicator (e.g., "et", "st", "qt", "ht", "wt")
+            if (j < rhythmLine.length && rhythmLine[j] === 't') {
+                symbol += 't';
+                j++;
+            }
+            // Check for pause indicator (e.g., "hp", "qp", "wp", "ep", "sp", "tp")
+            else if (j < rhythmLine.length && rhythmLine[j] === 'p') {
                 symbol += 'p';
                 j++;
             }
 
-            // Check for dotted note/pause (e.g., "h.", "hp.", "q.")
+            // Check for dotted note/pause (e.g., "h.", "hp.", "q.", "et.")
             if (j < rhythmLine.length && rhythmLine[j] === '.') {
                 symbol += '.';
                 j++;
@@ -576,16 +581,47 @@
             flag2.setAttribute('d', d2);
             flag2.setAttribute('fill', TAB_CONFIG.stemColor);
             group.appendChild(flag2);
-        } else if (baseRhythm === 't') {
-            // Triplet rest - eighth rest with "3" above
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const d = `M ${centerX} ${centerY - 4} L ${centerX - 2} ${centerY} L ${centerX + 2} ${centerY + 4} q 3 2 3 4`;
-            path.setAttribute('d', d);
-            path.setAttribute('stroke', TAB_CONFIG.stemColor);
-            path.setAttribute('stroke-width', 1.5);
-            path.setAttribute('fill', 'none');
-            group.appendChild(path);
+        } else if (isTriplet(rhythm)) {
+            // Triplet rest - render base rest with "3" above
+            const tripletBase = getTripletBaseValue(rhythm);
 
+            // Render the base rest symbol (reuse the rendering logic)
+            if (tripletBase === 'w') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', centerX - 6);
+                rect.setAttribute('y', centerY - 2);
+                rect.setAttribute('width', 12);
+                rect.setAttribute('height', 4);
+                rect.setAttribute('fill', TAB_CONFIG.stemColor);
+                group.appendChild(rect);
+            } else if (tripletBase === 'h') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', centerX - 6);
+                rect.setAttribute('y', centerY - 2);
+                rect.setAttribute('width', 12);
+                rect.setAttribute('height', 4);
+                rect.setAttribute('fill', TAB_CONFIG.stemColor);
+                group.appendChild(rect);
+            } else if (tripletBase === 'q') {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${centerX - 3} ${centerY - 6} L ${centerX - 1} ${centerY - 4} L ${centerX + 1} ${centerY} q 2 1 2 3`;
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', TAB_CONFIG.stemColor);
+                path.setAttribute('stroke-width', 1.5);
+                path.setAttribute('fill', 'none');
+                group.appendChild(path);
+            } else if (tripletBase === 'e' || tripletBase === 's' || tripletBase === '') {
+                // Eighth or sixteenth triplet rest
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${centerX} ${centerY - 4} L ${centerX - 2} ${centerY} L ${centerX + 2} ${centerY + 4} q 3 2 3 4`;
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', TAB_CONFIG.stemColor);
+                path.setAttribute('stroke-width', 1.5);
+                path.setAttribute('fill', 'none');
+                group.appendChild(path);
+            }
+
+            // Add "3" indicator for all triplet rests
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('x', centerX);
             text.setAttribute('y', centerY - 10);
@@ -631,7 +667,9 @@
         group.setAttribute('class', 'rhythm-stem');
 
         // Draw stem for all notes except whole notes (stem goes upward from note head)
-        if (rhythm !== 'w' && rhythm !== 'w.') {
+        // Skip stem for whole notes (w, w., wt, wt.)
+        const isWholeNote = rhythm === 'w' || rhythm === 'w.' || rhythm === 'wt' || rhythm === 'wt.';
+        if (!isWholeNote) {
             const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             stem.setAttribute('x1', stemX);
             stem.setAttribute('y1', noteHeadY + 3);  // Start slightly below center to go through note head
@@ -716,19 +754,54 @@
         }
 
         // Handle triplet notes
-        if (rhythm === 't') {
-            const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-            noteHead.setAttribute('cx', stemX);
-            noteHead.setAttribute('cy', noteHeadY);
-            noteHead.setAttribute('rx', 4);
-            noteHead.setAttribute('ry', 3);
-            noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
-            group.appendChild(noteHead);
+        if (isTriplet(rhythm)) {
+            const tripletBase = getTripletBaseValue(rhythm);
+            const hasDot = rhythm.includes('.');
+
+            // Render note head based on triplet base value
+            if (tripletBase === 'w') {
+                // Whole note - open note head
+                const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                noteHead.setAttribute('cx', stemX);
+                noteHead.setAttribute('cy', noteHeadY);
+                noteHead.setAttribute('rx', 4);
+                noteHead.setAttribute('ry', 3);
+                noteHead.setAttribute('fill', 'none');
+                noteHead.setAttribute('stroke', TAB_CONFIG.stemColor);
+                noteHead.setAttribute('stroke-width', 1.5);
+                group.appendChild(noteHead);
+            } else if (tripletBase === 'h') {
+                // Half note - open note head
+                const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                noteHead.setAttribute('cx', stemX);
+                noteHead.setAttribute('cy', noteHeadY);
+                noteHead.setAttribute('rx', 4);
+                noteHead.setAttribute('ry', 3);
+                noteHead.setAttribute('fill', 'none');
+                noteHead.setAttribute('stroke', TAB_CONFIG.stemColor);
+                noteHead.setAttribute('stroke-width', 1.5);
+                group.appendChild(noteHead);
+            } else {
+                // Quarter, eighth, sixteenth - filled note head
+                const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                noteHead.setAttribute('cx', stemX);
+                noteHead.setAttribute('cy', noteHeadY);
+                noteHead.setAttribute('rx', 4);
+                noteHead.setAttribute('ry', 3);
+                noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
+                group.appendChild(noteHead);
+            }
 
             // Add beam connecting triplet notes (draw on the last note of the group)
             if (isLastOfTriplet && tripletGroupX) {
                 const beamY = stemEndY;
+                const beamThickness = 3;
+                const beamSpacing = 4;
                 const midX = (tripletGroupX.firstStemX + tripletGroupX.lastStemX) / 2;
+
+                // Determine beam style based on triplet type
+                const isDoubleBeam = (tripletBase === 's');  // Sixteenth triplet needs double beam
+                const isDashedBeam = (tripletBase === 'q');  // Quarter triplet uses dashed beam
 
                 // Draw left beam segment (from first stem to middle)
                 const leftBeam = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -737,7 +810,10 @@
                 leftBeam.setAttribute('x2', midX - 8);  // Leave gap for "3"
                 leftBeam.setAttribute('y2', beamY);
                 leftBeam.setAttribute('stroke', TAB_CONFIG.stemColor);
-                leftBeam.setAttribute('stroke-width', 3);
+                leftBeam.setAttribute('stroke-width', beamThickness);
+                if (isDashedBeam) {
+                    leftBeam.setAttribute('stroke-dasharray', '4 2');  // Dashed pattern for quarter triplets
+                }
                 group.appendChild(leftBeam);
 
                 // Draw right beam segment (from middle to last stem)
@@ -747,8 +823,34 @@
                 rightBeam.setAttribute('x2', tripletGroupX.lastStemX);
                 rightBeam.setAttribute('y2', beamY);
                 rightBeam.setAttribute('stroke', TAB_CONFIG.stemColor);
-                rightBeam.setAttribute('stroke-width', 3);
+                rightBeam.setAttribute('stroke-width', beamThickness);
+                if (isDashedBeam) {
+                    rightBeam.setAttribute('stroke-dasharray', '4 2');  // Dashed pattern for quarter triplets
+                }
                 group.appendChild(rightBeam);
+
+                // Add second beam for sixteenth triplets
+                if (isDoubleBeam) {
+                    const secondBeamY = beamY + beamSpacing;
+
+                    const leftBeam2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    leftBeam2.setAttribute('x1', tripletGroupX.firstStemX);
+                    leftBeam2.setAttribute('y1', secondBeamY);
+                    leftBeam2.setAttribute('x2', midX - 8);
+                    leftBeam2.setAttribute('y2', secondBeamY);
+                    leftBeam2.setAttribute('stroke', TAB_CONFIG.stemColor);
+                    leftBeam2.setAttribute('stroke-width', beamThickness);
+                    group.appendChild(leftBeam2);
+
+                    const rightBeam2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    rightBeam2.setAttribute('x1', midX + 8);
+                    rightBeam2.setAttribute('y1', secondBeamY);
+                    rightBeam2.setAttribute('x2', tripletGroupX.lastStemX);
+                    rightBeam2.setAttribute('y2', secondBeamY);
+                    rightBeam2.setAttribute('stroke', TAB_CONFIG.stemColor);
+                    rightBeam2.setAttribute('stroke-width', beamThickness);
+                    group.appendChild(rightBeam2);
+                }
 
                 // Add "3" in the middle of the beam
                 const bracketText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -858,7 +960,24 @@
      * Helper function to get base rhythm without dot
      */
     function getBaseRhythm(rhythm) {
-        return rhythm ? rhythm.replace('.', '') : '';
+        if (!rhythm) return '';
+        // Strip dots and triplet indicator
+        return rhythm.replace('.', '').replace('t', '');
+    }
+
+    /**
+     * Check if a rhythm is a triplet
+     */
+    function isTriplet(rhythm) {
+        return rhythm && rhythm.includes('t');
+    }
+
+    /**
+     * Get the base note value for a triplet (without the 't')
+     */
+    function getTripletBaseValue(rhythm) {
+        if (!isTriplet(rhythm)) return null;
+        return rhythm.replace('t', '').replace('.', '');
     }
 
     /**
@@ -992,7 +1111,7 @@
                 group.appendChild(line);
 
                 // Track triplet groups
-                if (stringIndex === 0 && token.rhythm === 't') {
+                if (stringIndex === 0 && isTriplet(token.rhythm)) {
                     if (tripletGroupStart === null) {
                         tripletGroupStart = x;
                         tripletCount = 1;
@@ -1001,7 +1120,7 @@
                         tripletCount++;
                         tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
                     }
-                } else if (stringIndex === 0 && token.rhythm !== 't' && tripletGroupStart !== null) {
+                } else if (stringIndex === 0 && !isTriplet(token.rhythm) && tripletGroupStart !== null) {
                     tripletGroupStart = null;
                     tripletCount = 0;
                     tripletStemPositions = [];
@@ -1041,8 +1160,41 @@
                         const baseRhythm = getBaseRhythm(token.rhythm);
                         const hasDot = token.rhythm.includes('.');
 
+                        // Handle triplets separately (they have their own beaming)
+                        if (isTriplet(token.rhythm)) {
+                            // Finalize any pending beaming groups before triplet
+                            if (eighthNoteGroup.length > 0) {
+                                if (eighthNoteGroup.length >= 2) {
+                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                                } else {
+                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
+                                }
+                                eighthNoteGroup = [];
+                            }
+                            if (sixteenthNoteGroup.length > 0) {
+                                if (sixteenthNoteGroup.length >= 2) {
+                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                                } else {
+                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
+                                }
+                                sixteenthNoteGroup = [];
+                            }
+
+                            // Render triplet
+                            const isFirstOfTriplet = (tripletCount === 1);
+                            const isLastOfTriplet = (tripletCount === 3);
+                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
+
+                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+
+                            if (isLastOfTriplet) {
+                                tripletGroupStart = null;
+                                tripletCount = 0;
+                                tripletStemPositions = [];
+                            }
+                        }
                         // Handle eighth note beaming
-                        if (baseRhythm === 'e') {
+                        else if (baseRhythm === 'e') {
                             // Finalize any pending sixteenth note group
                             if (sixteenthNoteGroup.length > 0) {
                                 if (sixteenthNoteGroup.length >= 2) {
@@ -1101,18 +1253,8 @@
                                 sixteenthNoteGroup = [];
                             }
 
-                            // Render non-beamable note
-                            const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
-                            const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
-                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
-
-                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
-
-                            if (isLastOfTriplet) {
-                                tripletGroupStart = null;
-                                tripletCount = 0;
-                                tripletStemPositions = [];
-                            }
+                            // Render non-beamable note (w, h, q, etc.)
+                            renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
                         }
                     }
                 }
@@ -1135,7 +1277,7 @@
                 group.appendChild(text);
 
                 // Track triplet groups
-                if (stringIndex === 0 && token.rhythm === 't') {
+                if (stringIndex === 0 && isTriplet(token.rhythm)) {
                     if (tripletGroupStart === null) {
                         tripletGroupStart = x;
                         tripletCount = 1;
@@ -1144,7 +1286,7 @@
                         tripletCount++;
                         tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
                     }
-                } else if (stringIndex === 0 && token.rhythm !== 't' && tripletGroupStart !== null) {
+                } else if (stringIndex === 0 && !isTriplet(token.rhythm) && tripletGroupStart !== null) {
                     tripletGroupStart = null;
                     tripletCount = 0;
                     tripletStemPositions = [];
@@ -1186,8 +1328,41 @@
                         const baseRhythm = getBaseRhythm(token.rhythm);
                         const hasDot = token.rhythm.includes('.');
 
+                        // Handle triplets separately (they have their own beaming)
+                        if (isTriplet(token.rhythm)) {
+                            // Finalize any pending beaming groups before triplet
+                            if (eighthNoteGroup.length > 0) {
+                                if (eighthNoteGroup.length >= 2) {
+                                    renderBeamedNotes(svg, eighthNoteGroup, 'e');
+                                } else {
+                                    renderRhythmStem(svg, eighthNoteGroup[0].x, eighthNoteGroup[0].rhythm, false, false, null, false);
+                                }
+                                eighthNoteGroup = [];
+                            }
+                            if (sixteenthNoteGroup.length > 0) {
+                                if (sixteenthNoteGroup.length >= 2) {
+                                    renderBeamedNotes(svg, sixteenthNoteGroup, 's');
+                                } else {
+                                    renderRhythmStem(svg, sixteenthNoteGroup[0].x, sixteenthNoteGroup[0].rhythm, false, false, null, false);
+                                }
+                                sixteenthNoteGroup = [];
+                            }
+
+                            // Render triplet
+                            const isFirstOfTriplet = (tripletCount === 1);
+                            const isLastOfTriplet = (tripletCount === 3);
+                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
+
+                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+
+                            if (isLastOfTriplet) {
+                                tripletGroupStart = null;
+                                tripletCount = 0;
+                                tripletStemPositions = [];
+                            }
+                        }
                         // Handle eighth note beaming
-                        if (baseRhythm === 'e') {
+                        else if (baseRhythm === 'e') {
                             // Finalize any pending sixteenth note group
                             if (sixteenthNoteGroup.length > 0) {
                                 if (sixteenthNoteGroup.length >= 2) {
@@ -1246,18 +1421,8 @@
                                 sixteenthNoteGroup = [];
                             }
 
-                            // Render non-beamable note
-                            const isFirstOfTriplet = (token.rhythm === 't' && tripletCount === 1);
-                            const isLastOfTriplet = (token.rhythm === 't' && tripletCount === 3);
-                            const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
-
-                            renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
-
-                            if (isLastOfTriplet) {
-                                tripletGroupStart = null;
-                                tripletCount = 0;
-                                tripletStemPositions = [];
-                            }
+                            // Render non-beamable note (w, h, q, etc.)
+                            renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
                         }
                     }
                 }
