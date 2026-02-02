@@ -1085,16 +1085,18 @@
             }
 
             if (token.type === 'bar') {
-                // Render vertical bar
-                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line.setAttribute('x1', x + TAB_CONFIG.characterWidth / 2);
-                line.setAttribute('y1', TAB_CONFIG.paddingTop);
-                line.setAttribute('x2', x + TAB_CONFIG.characterWidth / 2);
-                line.setAttribute('y2', TAB_CONFIG.paddingTop + (5 * TAB_CONFIG.lineHeight));
-                line.setAttribute('stroke', TAB_CONFIG.barColor);
-                line.setAttribute('stroke-width', TAB_CONFIG.barStrokeWidth);
-                line.setAttribute('class', 'tab-bar');
-                group.appendChild(line);
+                // Render vertical bar (only on first string to avoid duplicates)
+                if (stringIndex === 0) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x + TAB_CONFIG.characterWidth / 2);
+                    line.setAttribute('y1', TAB_CONFIG.paddingTop);
+                    line.setAttribute('x2', x + TAB_CONFIG.characterWidth / 2);
+                    line.setAttribute('y2', TAB_CONFIG.paddingTop + (5 * TAB_CONFIG.lineHeight));
+                    line.setAttribute('stroke', TAB_CONFIG.barColor);
+                    line.setAttribute('stroke-width', TAB_CONFIG.barStrokeWidth);
+                    line.setAttribute('class', 'tab-bar');
+                    group.appendChild(line);
+                }
             } else if (token.type === 'gap') {
                 // Render horizontal line segment (gap)
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1439,7 +1441,7 @@
                 const currIsDigit = currToken.value && /\d/.test(currToken.value);
 
                 if ((prevIsDigit && currIsLetter) || (prevIsLetter && currIsDigit)) {
-                    extraSpacing = 2; // Add 4px spacing between numbers and technique letters
+                    extraSpacing = 1; // Add 1px spacing between numbers and technique letters
                 }
             }
 
