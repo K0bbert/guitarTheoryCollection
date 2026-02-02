@@ -192,7 +192,7 @@
             }
         }
 
-        // Second pass: assign pauses to gaps between notes
+        // Second pass: assign pauses to gaps
         rhythmIndex = 0;
         let lastNoteGroupIndex = -1;
 
@@ -215,10 +215,10 @@
                     }
                 }
 
-                // If we have pauses and there's a gap before this note, assign them
-                if (pausesToInsert.length > 0 && lastNoteGroupIndex >= 0) {
+                // If we have pauses, assign them to the gap before this note
+                if (pausesToInsert.length > 0) {
                     // Find the gap before this note group
-                    for (let j = lastNoteGroupIndex + 1; j < i; j++) {
+                    for (let j = Math.max(0, lastNoteGroupIndex + 1); j < i; j++) {
                         if (groups[j].type === 'gap') {
                             groups[j].pauses = pausesToInsert;
                             break;
@@ -227,6 +227,25 @@
                 }
 
                 lastNoteGroupIndex = i;
+            }
+        }
+
+        // Third pass: handle any remaining pauses after all notes
+        const remainingPauses = [];
+        while (rhythmIndex < rhythms.length) {
+            if (rhythms[rhythmIndex].isPause) {
+                remainingPauses.push(rhythms[rhythmIndex].symbol);
+            }
+            rhythmIndex++;
+        }
+
+        if (remainingPauses.length > 0) {
+            // Assign to the first gap after the last note, or the last gap
+            for (let j = lastNoteGroupIndex + 1; j < groups.length; j++) {
+                if (groups[j].type === 'gap') {
+                    groups[j].pauses = remainingPauses;
+                    break;
+                }
             }
         }
     }
@@ -721,7 +740,15 @@
                 line.setAttribute('y1', yPosition);
 
                 // Use wider spacing for gaps with multiple dashes
-                const width = token.spacing === 'wide' ? TAB_CONFIG.characterWidth * 2.0 : TAB_CONFIG.characterWidth;
+                let width = token.spacing === 'wide' ? TAB_CONFIG.characterWidth * 2.0 : TAB_CONFIG.characterWidth;
+
+                // If there are pauses, ensure we have enough width for them
+                if (token.pauses && token.pauses.length > 0) {
+                    const minPauseWidth = TAB_CONFIG.characterWidth * 2;  // Minimum space per pause
+                    const totalPauseWidth = minPauseWidth * token.pauses.length;
+                    width = Math.max(width, totalPauseWidth);
+                }
+
                 line.setAttribute('x2', x + width);
                 line.setAttribute('y2', yPosition);
                 line.setAttribute('stroke', TAB_CONFIG.stringColor);
@@ -731,10 +758,10 @@
 
                 // Render pauses in the gap (on the first string)
                 if (stringIndex === 0 && token.pauses && token.pauses.length > 0) {
-                    // Distribute pauses across the gap width
-                    const pauseSpacing = width / (token.pauses.length + 1);
+                    const pauseSpacing = width / token.pauses.length;
+
                     token.pauses.forEach((pause, idx) => {
-                        const pauseX = x + pauseSpacing * (idx + 1) - TAB_CONFIG.characterWidth / 2;
+                        const pauseX = x + pauseSpacing * idx + pauseSpacing / 2 - TAB_CONFIG.characterWidth / 2;
                         renderRhythmStem(svg, pauseX, pause, false, false, null);
                     });
                 }
@@ -848,11 +875,23 @@
     function renderTabulature(container, tabData) {
         // Render each section
         tabData.sections.forEach((section, sectionIndex) => {
-            // Calculate SVG width by accounting for wide spacing
+            // Calculate SVG width by accounting for wide spacing and pauses
             let totalWidth = TAB_CONFIG.paddingLeft + TAB_CONFIG.paddingRight;
             if (section.tokenLines.length > 0) {
                 for (const token of section.tokenLines[0]) {
-                    if ((token.type === 'gap' || token.type === 'dash') && token.spacing === 'wide') {
+                    if (token.type === 'gap') {
+                        // Calculate gap width (same logic as in rendering)
+                        let width = token.spacing === 'wide' ? TAB_CONFIG.characterWidth * 2.0 : TAB_CONFIG.characterWidth;
+
+                        // If there are pauses, ensure we have enough width for them
+                        if (token.pauses && token.pauses.length > 0) {
+                            const minPauseWidth = TAB_CONFIG.characterWidth * 2;
+                            const totalPauseWidth = minPauseWidth * token.pauses.length;
+                            width = Math.max(width, totalPauseWidth);
+                        }
+
+                        totalWidth += width;
+                    } else if (token.type === 'dash' && token.spacing === 'wide') {
                         totalWidth += TAB_CONFIG.characterWidth * 2.0;
                     } else {
                         totalWidth += TAB_CONFIG.characterWidth;
