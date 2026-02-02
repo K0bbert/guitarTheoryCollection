@@ -401,13 +401,15 @@
         const baseRhythm = rhythm.replace('p', '').replace('.', '');
 
         if (baseRhythm === 'w') {
-            // Whole rest - filled rectangle hanging down
+            // Whole rest - hollow rectangle hanging down
             const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             rect.setAttribute('x', centerX - 4);
             rect.setAttribute('y', centerY - 5);
             rect.setAttribute('width', 8);
             rect.setAttribute('height', 4);
-            rect.setAttribute('fill', TAB_CONFIG.stemColor);
+            rect.setAttribute('stroke', TAB_CONFIG.stemColor);
+            rect.setAttribute('stroke-width', 1.5);
+            rect.setAttribute('fill', 'none');
             group.appendChild(rect);
         } else if (baseRhythm === 'h') {
             // Half rest - filled rectangle sitting on line
