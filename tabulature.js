@@ -13,7 +13,7 @@
         fontSize: 14,            // Font size for fret numbers
         stringStrokeWidth: 1.5,  // Width of string lines
         barStrokeWidth: 2,       // Width of vertical bars
-        paddingTop: 50,          // Top padding (increased for rhythm stems)
+        paddingTop: 65,          // Top padding (increased for rhythm stems)
         paddingBottom: 20,       // Bottom padding
         paddingLeft: 40,         // Left padding (space for tuning labels)
         paddingRight: 10,        // Right padding
@@ -22,7 +22,7 @@
         numberColor: '#000',     // Color for fret numbers
         fontFamily: 'Courier New, monospace',
         tuningLabelOffset: 25,   // Horizontal offset for tuning labels from left edge
-        stemHeight: 40,          // Height of rhythm stems (spacing from tab to rhythm notation)
+        stemHeight: 50,          // Height of rhythm stems (spacing from tab to rhythm notation)
         stemStrokeWidth: 1.5,    // Width of rhythm stems
         stemColor: '#000',       // Color for rhythm stems
         flagWidth: 8,            // Width of flags/beams
@@ -390,7 +390,9 @@
      */
     function renderRestSymbol(svg, x, rhythm) {
         const centerX = x + TAB_CONFIG.characterWidth / 2;
-        const centerY = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight / 2;
+        const noteHeadY = TAB_CONFIG.paddingTop - 22;  // Note heads close to the tab
+        const stemEndY = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight;  // Stems extend upward to here
+        const centerY = (noteHeadY + stemEndY) / 2;  // Center between note head and stem end
 
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'rhythm-rest');
@@ -427,14 +429,50 @@
             path.setAttribute('stroke-linecap', 'round');
             group.appendChild(path);
         } else if (baseRhythm === 'e') {
-            // Eighth rest - similar to quarter but with flag
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const d = `M ${centerX} ${centerY - 6} L ${centerX - 2} ${centerY - 2} L ${centerX + 2} ${centerY + 2} q 3 2 3 4`;
-            path.setAttribute('d', d);
-            path.setAttribute('stroke', TAB_CONFIG.stemColor);
-            path.setAttribute('stroke-width', 1.5);
-            path.setAttribute('fill', 'none');
-            group.appendChild(path);
+            // Eighth rest - diagonal stroke with filled flag
+            // Main diagonal stroke
+            const stroke = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            stroke.setAttribute('x1', centerX - 3);
+            stroke.setAttribute('y1', centerY - 7);
+            stroke.setAttribute('x2', centerX + 3);
+            stroke.setAttribute('y2', centerY + 7);
+            stroke.setAttribute('stroke', TAB_CONFIG.stemColor);
+            stroke.setAttribute('stroke-width', 1.5);
+            stroke.setAttribute('stroke-linecap', 'round');
+            group.appendChild(stroke);
+
+            // Filled flag/blob at the top
+            const flag = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const d = `M ${centerX - 3} ${centerY - 7} q 2 -1 4 0 q 2 2 0 4 q -2 1 -4 0 Z`;
+            flag.setAttribute('d', d);
+            flag.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(flag);
+        } else if (baseRhythm === 's') {
+            // Sixteenth rest - diagonal stroke with two filled flags
+            // Main diagonal stroke
+            const stroke = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            stroke.setAttribute('x1', centerX - 3);
+            stroke.setAttribute('y1', centerY - 7);
+            stroke.setAttribute('x2', centerX + 3);
+            stroke.setAttribute('y2', centerY + 7);
+            stroke.setAttribute('stroke', TAB_CONFIG.stemColor);
+            stroke.setAttribute('stroke-width', 1.5);
+            stroke.setAttribute('stroke-linecap', 'round');
+            group.appendChild(stroke);
+
+            // First filled flag/blob at the top
+            const flag1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const d1 = `M ${centerX - 3} ${centerY - 7} q 2 -1 4 0 q 2 2 0 4 q -2 1 -4 0 Z`;
+            flag1.setAttribute('d', d1);
+            flag1.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(flag1);
+
+            // Second filled flag/blob below the first
+            const flag2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const d2 = `M ${centerX - 1.5} ${centerY - 3} q 2 -1 4 0 q 2 2 0 4 q -2 1 -4 0 Z`;
+            flag2.setAttribute('d', d2);
+            flag2.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(flag2);
         } else if (baseRhythm === 't') {
             // Triplet rest - eighth rest with "3" above
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -482,19 +520,19 @@
         }
 
         const stemX = x + TAB_CONFIG.characterWidth / 2;
-        const stemTop = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight;
-        const stemBottom = TAB_CONFIG.paddingTop - 15;  // 15px gap above the string
+        const noteHeadY = TAB_CONFIG.paddingTop - 22;  // Note heads close to the tab
+        const stemEndY = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight;  // Stems extend upward to here
 
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'rhythm-stem');
 
-        // Draw stem for all notes except whole notes
+        // Draw stem for all notes except whole notes (stem goes upward from note head)
         if (rhythm !== 'w' && rhythm !== 'w.') {
             const stem = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             stem.setAttribute('x1', stemX);
-            stem.setAttribute('y1', stemBottom);
+            stem.setAttribute('y1', noteHeadY + 3);  // Start slightly below center to go through note head
             stem.setAttribute('x2', stemX);
-            stem.setAttribute('y2', stemTop);
+            stem.setAttribute('y2', stemEndY);  // End higher up
             stem.setAttribute('stroke', TAB_CONFIG.stemColor);
             stem.setAttribute('stroke-width', TAB_CONFIG.stemStrokeWidth);
             group.appendChild(stem);
@@ -504,7 +542,7 @@
         if (rhythm === 'w' || rhythm === 'w.' || rhythm === 'h' || rhythm === 'h.') {
             const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
             noteHead.setAttribute('cx', stemX);
-            noteHead.setAttribute('cy', stemTop + 3);
+            noteHead.setAttribute('cy', noteHeadY);
             noteHead.setAttribute('rx', 4);
             noteHead.setAttribute('ry', 3);
             noteHead.setAttribute('stroke', TAB_CONFIG.stemColor);
@@ -517,7 +555,7 @@
         if (rhythm === 'q' || rhythm === 'q.') {
             const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
             noteHead.setAttribute('cx', stemX);
-            noteHead.setAttribute('cy', stemTop + 3);
+            noteHead.setAttribute('cy', noteHeadY);
             noteHead.setAttribute('rx', 4);
             noteHead.setAttribute('ry', 3);
             noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
@@ -528,25 +566,51 @@
         if (rhythm === 'e' || rhythm === 'e.') {
             const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
             noteHead.setAttribute('cx', stemX);
-            noteHead.setAttribute('cy', stemTop + 3);
+            noteHead.setAttribute('cy', noteHeadY);
             noteHead.setAttribute('rx', 4);
             noteHead.setAttribute('ry', 3);
             noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
             group.appendChild(noteHead);
 
-            // Add flag (filled curved shape)
+            // Add flag (filled curved shape pointing downward from top of stem)
             const flag = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const flagPath = `M ${stemX} ${stemTop} q ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight} ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight * 2} q ${-TAB_CONFIG.flagWidth * 0.5} ${-TAB_CONFIG.flagHeight} ${-TAB_CONFIG.flagWidth} ${-TAB_CONFIG.flagHeight * 1.5} Z`;
+            const flagPath = `M ${stemX} ${stemEndY} q ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight} ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight * 2} q ${-TAB_CONFIG.flagWidth * 0.5} ${-TAB_CONFIG.flagHeight} ${-TAB_CONFIG.flagWidth} ${-TAB_CONFIG.flagHeight * 1.5} Z`;
             flag.setAttribute('d', flagPath);
             flag.setAttribute('fill', TAB_CONFIG.stemColor);
             group.appendChild(flag);
+        }
+
+        // Add note head and flags for sixteenth notes (filled circle + two flags)
+        if (rhythm === 's' || rhythm === 's.') {
+            const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+            noteHead.setAttribute('cx', stemX);
+            noteHead.setAttribute('cy', noteHeadY);
+            noteHead.setAttribute('rx', 4);
+            noteHead.setAttribute('ry', 3);
+            noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(noteHead);
+
+            // Add first flag (filled curved shape pointing downward from top of stem)
+            const flag1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const flagPath1 = `M ${stemX} ${stemEndY} q ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight} ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight * 2} q ${-TAB_CONFIG.flagWidth * 0.5} ${-TAB_CONFIG.flagHeight} ${-TAB_CONFIG.flagWidth} ${-TAB_CONFIG.flagHeight * 1.5} Z`;
+            flag1.setAttribute('d', flagPath1);
+            flag1.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(flag1);
+
+            // Add second flag slightly below the first
+            const flag2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const flagOffset = 5;  // Vertical spacing between flags
+            const flagPath2 = `M ${stemX} ${stemEndY + flagOffset} q ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight} ${TAB_CONFIG.flagWidth} ${TAB_CONFIG.flagHeight * 2} q ${-TAB_CONFIG.flagWidth * 0.5} ${-TAB_CONFIG.flagHeight} ${-TAB_CONFIG.flagWidth} ${-TAB_CONFIG.flagHeight * 1.5} Z`;
+            flag2.setAttribute('d', flagPath2);
+            flag2.setAttribute('fill', TAB_CONFIG.stemColor);
+            group.appendChild(flag2);
         }
 
         // Handle triplet notes
         if (rhythm === 't') {
             const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
             noteHead.setAttribute('cx', stemX);
-            noteHead.setAttribute('cy', stemTop + 3);
+            noteHead.setAttribute('cy', noteHeadY);
             noteHead.setAttribute('rx', 4);
             noteHead.setAttribute('ry', 3);
             noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
@@ -554,21 +618,33 @@
 
             // Add beam connecting triplet notes (draw on the last note of the group)
             if (isLastOfTriplet && tripletGroupX) {
-                const beamY = stemTop - 2;
-                const beam = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                beam.setAttribute('x1', tripletGroupX.firstStemX);
-                beam.setAttribute('y1', beamY);
-                beam.setAttribute('x2', tripletGroupX.lastStemX);
-                beam.setAttribute('y2', beamY);
-                beam.setAttribute('stroke', TAB_CONFIG.stemColor);
-                beam.setAttribute('stroke-width', 3);
-                group.appendChild(beam);
-
-                // Add "3" bracket above beam
-                const bracketText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const beamY = stemEndY;
                 const midX = (tripletGroupX.firstStemX + tripletGroupX.lastStemX) / 2;
+
+                // Draw left beam segment (from first stem to middle)
+                const leftBeam = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                leftBeam.setAttribute('x1', tripletGroupX.firstStemX);
+                leftBeam.setAttribute('y1', beamY);
+                leftBeam.setAttribute('x2', midX - 8);  // Leave gap for "3"
+                leftBeam.setAttribute('y2', beamY);
+                leftBeam.setAttribute('stroke', TAB_CONFIG.stemColor);
+                leftBeam.setAttribute('stroke-width', 3);
+                group.appendChild(leftBeam);
+
+                // Draw right beam segment (from middle to last stem)
+                const rightBeam = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                rightBeam.setAttribute('x1', midX + 8);  // Leave gap for "3"
+                rightBeam.setAttribute('y1', beamY);
+                rightBeam.setAttribute('x2', tripletGroupX.lastStemX);
+                rightBeam.setAttribute('y2', beamY);
+                rightBeam.setAttribute('stroke', TAB_CONFIG.stemColor);
+                rightBeam.setAttribute('stroke-width', 3);
+                group.appendChild(rightBeam);
+
+                // Add "3" in the middle of the beam
+                const bracketText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 bracketText.setAttribute('x', midX);
-                bracketText.setAttribute('y', beamY - 8);
+                bracketText.setAttribute('y', beamY - 4);  // Position above beam level
                 bracketText.setAttribute('text-anchor', 'middle');
                 bracketText.setAttribute('font-family', TAB_CONFIG.fontFamily);
                 bracketText.setAttribute('font-size', 11);
@@ -583,7 +659,7 @@
         if (rhythm.includes('.')) {
             const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             dot.setAttribute('cx', stemX + 8);
-            dot.setAttribute('cy', stemTop + 3);
+            dot.setAttribute('cy', noteHeadY);
             dot.setAttribute('r', 2);
             dot.setAttribute('fill', TAB_CONFIG.stemColor);
             group.appendChild(dot);
