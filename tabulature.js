@@ -1210,8 +1210,8 @@
      */
     function getBaseRhythm(rhythm) {
         if (!rhythm) return '';
-        // Strip dots and triplet indicator
-        return rhythm.replace('.', '').replace('t', '');
+        // Strip dots, triplet indicator, and pause indicator
+        return rhythm.replace('.', '').replace('t', '').replace('p', '');
     }
 
     /**
@@ -1287,21 +1287,61 @@
      * 2. Break when a note starts on a beat boundary (except for dotted patterns that complete a beat)
      * 3. For mixed subdivisions, break if previous note crosses a beat boundary
      */
-    function shouldBreakBeam(rhythms, currentIndex, currentBeatPos, noteType) {
-        if (currentIndex === 0) return false;
+    function shouldBreakBeam(beamGroupRhythms, currentRhythm, currentBeatPos) {
+        if (beamGroupRhythms.length === 0) return false;
 
-        const currentDuration = getRhythmDuration(rhythms[currentIndex]);
+        const currentDuration = getRhythmDuration(currentRhythm);
         const currentStartPos = currentBeatPos - currentDuration;
-        const prevDuration = getRhythmDuration(rhythms[currentIndex - 1]);
-        const prevBeatPos = currentBeatPos - currentDuration;
+        const prevRhythm = beamGroupRhythms[beamGroupRhythms.length - 1];
+        const prevDuration = getRhythmDuration(prevRhythm);
+        const prevBeatPos = currentStartPos;  // Previous note ended where current note starts
         const prevStartPos = prevBeatPos - prevDuration;
-        const prevRhythm = rhythms[currentIndex - 1];
-        const currentRhythm = rhythms[currentIndex];
 
-        // Never beam across bar middle (beats 2 and 3)
-        // If previous note ends before or at beat 2 and current starts before beat 2 but ends at or after beat 2
-        if (prevStartPos < 2 && currentStartPos < 2 && currentBeatPos >= 2) {
+        console.log('shouldBreakBeam:', {
+            prevRhythm, currentRhythm,
+            prevBeatPos, currentStartPos, prevStartPos,
+            crossesBoundary: prevBeatPos <= 2.0 && currentStartPos >= 2.0
+        });
+
+        // CRITICAL RULE: Never beam across the middle of a 4/4 bar (beat 2-3 boundary at position 2.0)
+        // This means: don't beam notes where one ends at/before 2.0 and the next starts at/after 2.0
+        if (prevBeatPos <= 2.0 && currentStartPos >= 2.0) {
+            // Check if this is a special e.+s pattern
+            const prevBase = getBaseRhythm(prevRhythm);
+            const currBase = getBaseRhythm(currentRhythm);
+            const isEDotS = prevRhythm.includes('.') && prevBase === 'e' && currBase === 's';
+            const prevStartsAfter2 = prevStartPos >= 2.0;
+
+            console.log('  -> At 2.0 boundary:', { prevBase, currBase, isEDotS, prevStartsAfter2 });
+
+            // Only allow e.+s to beam across 2.0 if BOTH notes are after the boundary
+            // (e.g., e. at 2.0-2.75, s at 2.75-3.0 is allowed)
+            if (isEDotS && prevStartsAfter2) {
+                // Exception: allow this e.+s pattern
+                console.log('  -> Exception: allowing e.+s pattern');
+                return false;
+            }
+
+            // Otherwise, always break at the 2.0 boundary
+            console.log('  -> Breaking at 2.0 boundary');
             return true;
+        }
+
+        // SECONDARY RULE: Break at beat boundaries (1.0, 3.0) for clarity
+        // Exception: simple eighth note patterns (e-e, e-e-e-e) can beam across these boundaries
+        if (prevBeatPos % 1 === 0 && currentStartPos % 1 === 0 && prevBeatPos === currentStartPos && currentStartPos > 0) {
+            // Notes meet exactly at a beat boundary
+            const prevBase = getBaseRhythm(prevRhythm);
+            const currBase = getBaseRhythm(currentRhythm);
+
+            // Allow simple eighth note patterns to beam across beat 1 and 3
+            const isSimpleEighths = !prevRhythm.includes('.') && !currentRhythm.includes('.') &&
+                                   prevBase === 'e' && currBase === 'e';
+
+            if (!isSimpleEighths) {
+                console.log('  -> Breaking at beat boundary', currentStartPos);
+                return true;
+            }
         }
 
         // Check if previous note crosses a beat boundary (starts in one beat, ends in another)
@@ -1311,19 +1351,6 @@
         if (prevStartBeat !== prevEndBeat && prevBeatPos % 1 !== 0) {
             // Previous note crosses a beat boundary (and doesn't end exactly on the beat)
             return true;
-        }
-
-        // For beamed groups, break when a note starts on a beat boundary (1.0, 2.0, 3.0)
-        // Exception: Don't break for common dotted patterns like e.+s that complete a beat
-        if (currentStartPos % 1 === 0 && currentStartPos > 0 && currentStartPos < 4) {
-            // Check if this is part of a dotted eighth + sixteenth pattern (e. s = 1 beat)
-            const prevBase = getBaseRhythm(prevRhythm);
-            const currBase = getBaseRhythm(currentRhythm);
-            const isDottedEighthSixteenth = prevRhythm && prevRhythm.includes('.') && prevBase === 'e' && currBase === 's';
-
-            if (!isDottedEighthSixteenth) {
-                return true;
-            }
         }
 
         return false;
@@ -1376,6 +1403,7 @@
             if (token.type === 'bar') {
                 // Finalize any pending beaming groups at bar boundary
                 if (stringIndex === 0) {
+                    console.log('BAR LINE: Resetting beat position from', currentBeatPosition, 'to 0');
                     if (beamGroup.length > 0) {
                         if (beamGroup.length >= 2) {
                             renderBeamedNotes(svg, beamGroup, 'mixed');
@@ -1442,7 +1470,9 @@
                         const pauseX = x + pauseSpacing * idx + pauseSpacing / 2 - TAB_CONFIG.characterWidth / 2;
                         renderRhythmStem(svg, pauseX, pause, false, false, null);
                         // Update beat position for pauses
-                        currentBeatPosition += getRhythmDuration(pause);
+                        const pauseDuration = getRhythmDuration(pause);
+                        console.log('Rendering pause:', pause, 'duration:', pauseDuration, 'beatPos:', currentBeatPosition, '->', currentBeatPosition + pauseDuration);
+                        currentBeatPosition += pauseDuration;
                     });
                 }
 
@@ -1518,9 +1548,16 @@
                     }
                     // Handle beamable notes (eighth, sixteenth, 32nd)
                     else if (canBeBeamed(token.rhythm)) {
+                        // Calculate the beat position AFTER this note
+                        const noteDuration = getRhythmDuration(token.rhythm);
+                        const beatPosAfterNote = currentBeatPosition + noteDuration;
+
+                        console.log('Processing beamable note:', token.rhythm, 'beatPos:', currentBeatPosition, '->', beatPosAfterNote, 'current group size:', beamGroupRhythms.length);
+
                         // Check if we should break the beam based on beat position
-                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, beamGroupRhythms.length, currentBeatPosition, baseRhythm)) {
+                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote)) {
                             // Finalize current group before starting new one
+                            console.log('  -> BREAKING: Finalizing group of', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
                             if (beamGroup.length >= 2) {
                                 renderBeamedNotes(svg, beamGroup, 'mixed');
                             } else {
@@ -1528,14 +1565,16 @@
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
+                            console.log('  -> Group cleared, starting new group');
                         }
 
                         // Add to beam group
                         beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
                         beamGroupRhythms.push(token.rhythm);
+                        console.log('  -> Added', token.rhythm, ', group now has', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
 
                         // Update beat position
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        currentBeatPosition = beatPosAfterNote;
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
@@ -1630,8 +1669,12 @@
                     }
                     // Handle beamable notes (eighth, sixteenth, 32nd)
                     else if (canBeBeamed(token.rhythm)) {
+                        // Calculate the beat position AFTER this note
+                        const noteDuration = getRhythmDuration(token.rhythm);
+                        const beatPosAfterNote = currentBeatPosition + noteDuration;
+
                         // Check if we should break the beam based on beat position
-                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, beamGroupRhythms.length, currentBeatPosition, baseRhythm)) {
+                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote)) {
                             // Finalize current group before starting new one
                             if (beamGroup.length >= 2) {
                                 renderBeamedNotes(svg, beamGroup, 'mixed');
@@ -1646,7 +1689,7 @@
                         beamGroupRhythms.push(token.rhythm);
 
                         // Update beat position
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        currentBeatPosition = beatPosAfterNote;
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
