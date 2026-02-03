@@ -1284,55 +1284,45 @@
      * Check if beaming should break based on beat boundaries in 4/4 time
      * Rules:
      * 1. Never beam across beat 2|3 boundary (the middle of the bar)
-     * 2. For eighth notes: beam within beats, can cross beat 1|2 or 3|4
-     * 3. For sixteenth notes and smaller: beam within the same beat
-     * 4. After dotted notes: typically start new beam on next beat
+     * 2. Break when a note starts on a beat boundary (except for dotted patterns that complete a beat)
+     * 3. For mixed subdivisions, break if previous note crosses a beat boundary
      */
     function shouldBreakBeam(rhythms, currentIndex, currentBeatPos, noteType) {
         if (currentIndex === 0) return false;
 
         const currentDuration = getRhythmDuration(rhythms[currentIndex]);
+        const currentStartPos = currentBeatPos - currentDuration;
         const prevDuration = getRhythmDuration(rhythms[currentIndex - 1]);
         const prevBeatPos = currentBeatPos - currentDuration;
+        const prevStartPos = prevBeatPos - prevDuration;
         const prevRhythm = rhythms[currentIndex - 1];
+        const currentRhythm = rhythms[currentIndex];
 
         // Never beam across bar middle (beats 2 and 3)
-        // If previous note is before beat 2 and current is at or after beat 2
-        if (prevBeatPos < 2 && currentBeatPos >= 2) {
+        // If previous note ends before or at beat 2 and current starts before beat 2 but ends at or after beat 2
+        if (prevStartPos < 2 && currentStartPos < 2 && currentBeatPos >= 2) {
             return true;
         }
 
-        // For eighth notes (0.5 duration each)
-        if (noteType === 'e') {
-            // Break after dotted notes (they often end mid-beat)
-            if (prevRhythm && prevRhythm.includes('.')) {
-                // Check if we're starting a new beat or crossing the middle
-                const prevBeat = Math.floor(prevBeatPos);
-                const currBeat = Math.floor(currentBeatPos);
-                if (currBeat !== prevBeat || currentBeatPos >= 2) {
-                    return true;
-                }
-            }
-
-            // For eighth notes, prefer beaming in pairs per beat
-            // Break if we're on a new beat boundary (1.0, 2.0, 3.0, 4.0)
-            if (currentBeatPos % 1 === 0 && currentBeatPos > 0) {
-                return true;
-            }
+        // Check if previous note crosses a beat boundary (starts in one beat, ends in another)
+        // This is important for mixed subdivisions (e.g., e-s-e-s should break if e crosses beats)
+        const prevStartBeat = Math.floor(prevStartPos);
+        const prevEndBeat = Math.floor(prevBeatPos);
+        if (prevStartBeat !== prevEndBeat && prevBeatPos % 1 !== 0) {
+            // Previous note crosses a beat boundary (and doesn't end exactly on the beat)
+            return true;
         }
-        // For sixteenth notes and 32nd notes
-        else if (noteType === 's' || noteType === 'f') {
-            // Break on beat boundaries for sixteenths/32nds
-            if (currentBeatPos % 1 === 0 && currentBeatPos > 0) {
-                return true;
-            }
 
-            // Also break after dotted eighth notes or larger
-            if (prevRhythm && prevRhythm.includes('.')) {
-                const prevBase = getBaseRhythm(prevRhythm);
-                if (prevBase === 'e' || prevBase === 'q' || prevBase === 'h') {
-                    return true;
-                }
+        // For beamed groups, break when a note starts on a beat boundary (1.0, 2.0, 3.0)
+        // Exception: Don't break for common dotted patterns like e.+s that complete a beat
+        if (currentStartPos % 1 === 0 && currentStartPos > 0 && currentStartPos < 4) {
+            // Check if this is part of a dotted eighth + sixteenth pattern (e. s = 1 beat)
+            const prevBase = getBaseRhythm(prevRhythm);
+            const currBase = getBaseRhythm(currentRhythm);
+            const isDottedEighthSixteenth = prevRhythm && prevRhythm.includes('.') && prevBase === 'e' && currBase === 's';
+
+            if (!isDottedEighthSixteenth) {
+                return true;
             }
         }
 
