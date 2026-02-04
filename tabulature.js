@@ -535,10 +535,17 @@
             // Find the maximum number of tokens
             const maxTokens = Math.max(...tokenLines.map(tokens => tokens.length));
 
+            // Parse rhythm data for playback
+            let rhythmData = null;
+            if (rhythmLine) {
+                rhythmData = parseRhythmLine(rhythmLine);
+            }
+
             parsedSections.push({
                 tokenLines: tokenLines,
                 maxTokens: maxTokens,
-                numStrings: tokenLines.length
+                numStrings: tokenLines.length,
+                rhythmData: rhythmData
             });
         }
 
@@ -739,6 +746,7 @@
         }
 
         svg.appendChild(group);
+        return group;
     }
 
     /**
@@ -746,12 +754,11 @@
      * @param {boolean} skipFlags - If true, don't render flags (for beamed notes)
      */
     function renderRhythmStem(svg, x, rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, skipFlags) {
-        if (!rhythm) return;
+        if (!rhythm) return null;
 
         // Check if this is a pause/rest
         if (rhythm.includes('p')) {
-            renderRestSymbol(svg, x, rhythm);
-            return;
+            return renderRestSymbol(svg, x, rhythm);
         }
 
         const stemX = x + TAB_CONFIG.characterWidth / 2;
@@ -1053,10 +1060,10 @@
         }
 
         svg.appendChild(group);
+        return group;
     }
 
-    /**
-     * Get beam level for a note type (number of beams needed)
+    /**\n     * Get beam level for a note type (number of beams needed)
      * e = 1, s = 2, f = 3
      */
     function getBeamLevel(noteType) {
@@ -1076,10 +1083,11 @@
      * @param {string} noteType - 'e' for eighth notes, 's' for sixteenth notes, 'f' for 32nd notes (ignored for mixed groups)
      */
     function renderBeamedNotes(svg, noteGroup, noteType) {
-        if (noteGroup.length < 2) return;
+        if (noteGroup.length < 2) return [];
 
         console.log('>>> BEAMING', noteGroup.length, 'notes:', noteGroup.map(n => n.rhythm));
 
+        const createdElements = [];
         const stemEndY = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight;
         const noteHeadY = TAB_CONFIG.paddingTop - 22;
         const beamThickness = 3;
@@ -1100,6 +1108,7 @@
             stem.setAttribute('stroke', TAB_CONFIG.stemColor);
             stem.setAttribute('stroke-width', TAB_CONFIG.stemStrokeWidth);
             svg.appendChild(stem);
+            createdElements.push(stem);
 
             // Render filled note head
             const noteHead = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
@@ -1109,6 +1118,7 @@
             noteHead.setAttribute('ry', 3);
             noteHead.setAttribute('fill', TAB_CONFIG.stemColor);
             svg.appendChild(noteHead);
+            createdElements.push(noteHead);
 
             // Render dot if needed
             if (note.hasDot) {
@@ -1118,6 +1128,7 @@
                 dot.setAttribute('r', 2);
                 dot.setAttribute('fill', TAB_CONFIG.stemColor);
                 svg.appendChild(dot);
+                createdElements.push(dot);
             }
         });
 
@@ -1172,6 +1183,7 @@
                             beam.setAttribute('stroke', TAB_CONFIG.stemColor);
                             beam.setAttribute('stroke-width', beamThickness);
                             svg.appendChild(beam);
+                            createdElements.push(beam);
                         } else {
                             // Multiple notes - draw full beam from segmentStart to i
                             const beam = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1182,6 +1194,7 @@
                             beam.setAttribute('stroke', TAB_CONFIG.stemColor);
                             beam.setAttribute('stroke-width', beamThickness);
                             svg.appendChild(beam);
+                            createdElements.push(beam);
                         }
 
                         segmentStart = null;
@@ -1198,11 +1211,14 @@
                         beam.setAttribute('stroke', TAB_CONFIG.stemColor);
                         beam.setAttribute('stroke-width', beamThickness);
                         svg.appendChild(beam);
+                        createdElements.push(beam);
                     }
                     segmentStart = null;
                 }
             }
         }
+
+        return createdElements;
     }
 
     /**
@@ -1241,12 +1257,14 @@
      * Get duration in beats for a rhythm symbol
      * In 4/4 time: whole=4, half=2, quarter=1, eighth=0.5, sixteenth=0.25, 32nd=0.125
      * Dotted notes are 1.5x their normal duration
+     * Triplets: 3 triplets take the time of 2 normal notes, so each triplet is 2/3 the duration
      */
     function getRhythmDuration(rhythm) {
         if (!rhythm) return 0;
 
         const base = getBaseRhythm(rhythm);
         const hasDot = rhythm.includes('.');
+        const isTripletNote = isTriplet(rhythm);
 
         let duration = 0;
         switch(base) {
@@ -1263,6 +1281,11 @@
         // Dotted notes are 1.5x their duration
         if (hasDot) {
             duration *= 1.5;
+        }
+
+        // Triplets: 3 notes in the time of 2, so each is 2/3 duration
+        if (isTripletNote) {
+            duration = duration * 2 / 3;
         }
 
         return duration;
@@ -1392,6 +1415,10 @@
         // Track beat position within current bar (resets at each bar line)
         let currentBeatPosition = 0;
 
+        // Track elements and duration for bar validation
+        let currentBarElements = [];
+        let currentBarDuration = 0;
+
         for (let tokenIndex = 0; tokenIndex < maxTokens; tokenIndex++) {
             const token = tokenIndex < tokens.length ? tokens[tokenIndex] : {type: 'dash', value: '-'};
             const x = currentX;
@@ -1406,14 +1433,47 @@
                     console.log('BAR LINE: Resetting beat position from', currentBeatPosition, 'to 0');
                     if (beamGroup.length > 0) {
                         if (beamGroup.length >= 2) {
-                            renderBeamedNotes(svg, beamGroup, 'mixed');
+                            const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                            currentBarElements.push(...beamedElements);
                         } else {
-                            renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                            const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                            if (element) currentBarElements.push(element);
                         }
                         beamGroup = [];
                         beamGroupRhythms = [];
                     }
+
+                    // Validate bar duration and color elements red if invalid
+                    // Use epsilon for floating point comparison (triplets create fractions)
+                    const isValidBar = Math.abs(currentBarDuration - 4.0) < 0.001;
+                    let barError = null;
+                    if (!isValidBar && currentBarElements.length > 0) {
+                        barError = currentBarDuration - 4.0;
+                        console.log('INVALID BAR: Duration is', currentBarDuration, 'but should be 4.0');
+                        currentBarElements.forEach(element => {
+                            // Set color on the element itself
+                            element.setAttribute('stroke', 'red');
+                            element.setAttribute('fill', 'red');
+                            // If it's a group, also set color on all children
+                            if (element.tagName === 'g') {
+                                const children = element.querySelectorAll('*');
+                                children.forEach(child => {
+                                    child.setAttribute('stroke', 'red');
+                                    child.setAttribute('fill', 'red');
+                                });
+                            }
+                        });
+                    } else if (currentBarElements.length > 0) {
+                        console.log('VALID BAR: Duration is', currentBarDuration);
+                    }
+
+                    // Store error for display on bar line
+                    token.barError = barError;
+
+                    // Reset for next bar
                     currentBeatPosition = 0;
+                    currentBarElements = [];
+                    currentBarDuration = 0;
                 }
 
                 // Render vertical bar (only on first string to avoid duplicates)
@@ -1427,6 +1487,23 @@
                     line.setAttribute('stroke-width', TAB_CONFIG.barStrokeWidth);
                     line.setAttribute('class', 'tab-bar');
                     group.appendChild(line);
+
+                    // Display error above bar line if there's a duration error
+                    if (token.barError !== null && token.barError !== undefined) {
+                        const errorText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        const errorValue = token.barError;
+                        const errorStr = errorValue > 0 ? `+${errorValue.toFixed(2)}` : errorValue.toFixed(2);
+
+                        errorText.setAttribute('x', x + TAB_CONFIG.characterWidth / 2);
+                        errorText.setAttribute('y', TAB_CONFIG.paddingTop - 5); // Position above the tab
+                        errorText.setAttribute('text-anchor', 'middle');
+                        errorText.setAttribute('font-family', TAB_CONFIG.fontFamily);
+                        errorText.setAttribute('font-size', 11);
+                        errorText.setAttribute('font-weight', 'bold');
+                        errorText.setAttribute('fill', 'red');
+                        errorText.textContent = errorStr;
+                        group.appendChild(errorText);
+                    }
                 }
             } else if (token.type === 'gap') {
                 // Render horizontal line segment (gap)
@@ -1456,9 +1533,11 @@
                     // Finalize any pending beaming groups before rendering pauses
                     if (beamGroup.length > 0) {
                         if (beamGroup.length >= 2) {
-                            renderBeamedNotes(svg, beamGroup, 'mixed');
+                            const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                            currentBarElements.push(...beamedElements);
                         } else {
-                            renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                            const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                            if (element) currentBarElements.push(element);
                         }
                         beamGroup = [];
                         beamGroupRhythms = [];
@@ -1468,11 +1547,13 @@
 
                     token.pauses.forEach((pause, idx) => {
                         const pauseX = x + pauseSpacing * idx + pauseSpacing / 2 - TAB_CONFIG.characterWidth / 2;
-                        renderRhythmStem(svg, pauseX, pause, false, false, null);
-                        // Update beat position for pauses
+                        const pauseElement = renderRhythmStem(svg, pauseX, pause, false, false, null);
+                        if (pauseElement) currentBarElements.push(pauseElement);
+                        // Update beat position and bar duration for pauses
                         const pauseDuration = getRhythmDuration(pause);
                         console.log('Rendering pause:', pause, 'duration:', pauseDuration, 'beatPos:', currentBeatPosition, '->', currentBeatPosition + pauseDuration);
                         currentBeatPosition += pauseDuration;
+                        currentBarDuration += pauseDuration;
                     });
                 }
 
@@ -1522,9 +1603,11 @@
                         // Finalize any pending beaming group before triplet
                         if (beamGroup.length > 0) {
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
@@ -1535,7 +1618,8 @@
                         const isLastOfTriplet = (tripletCount === 3);
                         const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+                        const tripletElement = renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+                        if (tripletElement) currentBarElements.push(tripletElement);
 
                         if (isLastOfTriplet) {
                             tripletGroupStart = null;
@@ -1543,8 +1627,10 @@
                             tripletStemPositions = [];
                         }
 
-                        // Update beat position for triplets
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        // Update beat position and bar duration for triplets
+                        const tripletDuration = getRhythmDuration(token.rhythm);
+                        currentBeatPosition += tripletDuration;
+                        currentBarDuration += tripletDuration;
                     }
                     // Handle beamable notes (eighth, sixteenth, 32nd)
                     else if (canBeBeamed(token.rhythm)) {
@@ -1559,9 +1645,11 @@
                             // Finalize current group before starting new one
                             console.log('  -> BREAKING: Finalizing group of', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
@@ -1573,27 +1661,33 @@
                         beamGroupRhythms.push(token.rhythm);
                         console.log('  -> Added', token.rhythm, ', group now has', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
 
-                        // Update beat position
+                        // Update beat position and bar duration
                         currentBeatPosition = beatPosAfterNote;
+                        currentBarDuration += noteDuration;
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
                         // Finalize any pending beaming group
                         if (beamGroup.length > 0) {
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
 
                         // Render non-beamable note (w, h, q, etc.)
-                        renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                        const noteElement = renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                        if (noteElement) currentBarElements.push(noteElement);
 
-                        // Update beat position
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        // Update beat position and bar duration
+                        const noteDuration = getRhythmDuration(token.rhythm);
+                        currentBeatPosition += noteDuration;
+                        currentBarDuration += noteDuration;
                     }
                 }
 
@@ -1643,9 +1737,11 @@
                         // Finalize any pending beaming group before triplet
                         if (beamGroup.length > 0) {
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
@@ -1656,7 +1752,8 @@
                         const isLastOfTriplet = (tripletCount === 3);
                         const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                        renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+                        const tripletElement = renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+                        if (tripletElement) currentBarElements.push(tripletElement);
 
                         if (isLastOfTriplet) {
                             tripletGroupStart = null;
@@ -1664,8 +1761,10 @@
                             tripletStemPositions = [];
                         }
 
-                        // Update beat position for triplets (triplets have special timing but still occupy beats)
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        // Update beat position and bar duration for triplets
+                        const tripletDuration = getRhythmDuration(token.rhythm);
+                        currentBeatPosition += tripletDuration;
+                        currentBarDuration += tripletDuration;
                     }
                     // Handle beamable notes (eighth, sixteenth, 32nd)
                     else if (canBeBeamed(token.rhythm)) {
@@ -1677,9 +1776,11 @@
                         if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote)) {
                             // Finalize current group before starting new one
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
@@ -1688,27 +1789,33 @@
                         beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
                         beamGroupRhythms.push(token.rhythm);
 
-                        // Update beat position
+                        // Update beat position and bar duration
                         currentBeatPosition = beatPosAfterNote;
+                        currentBarDuration += noteDuration;
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
                         // Finalize any pending beaming group
                         if (beamGroup.length > 0) {
                             if (beamGroup.length >= 2) {
-                                renderBeamedNotes(svg, beamGroup, 'mixed');
+                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                                currentBarElements.push(...beamedElements);
                             } else {
-                                renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                                if (element) currentBarElements.push(element);
                             }
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
 
                         // Render non-beamable note (w, h, q, etc.)
-                        renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                        const noteElement = renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                        if (noteElement) currentBarElements.push(noteElement);
 
-                        // Update beat position
-                        currentBeatPosition += getRhythmDuration(token.rhythm);
+                        // Update beat position and bar duration
+                        const noteDuration = getRhythmDuration(token.rhythm);
+                        currentBeatPosition += noteDuration;
+                        currentBarDuration += noteDuration;
                     }
                 }
             }
@@ -1738,10 +1845,34 @@
         if (stringIndex === 0) {
             if (beamGroup.length > 0) {
                 if (beamGroup.length >= 2) {
-                    renderBeamedNotes(svg, beamGroup, 'mixed');
+                    const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
+                    currentBarElements.push(...beamedElements);
                 } else {
-                    renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                    const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
+                    if (element) currentBarElements.push(element);
                 }
+            }
+
+            // Validate final bar if it has any elements
+            // Use epsilon for floating point comparison (triplets create fractions)
+            const isValidBar = Math.abs(currentBarDuration - 4.0) < 0.001;
+            if (!isValidBar && currentBarElements.length > 0) {
+                console.log('INVALID FINAL BAR: Duration is', currentBarDuration, 'but should be 4.0');
+                currentBarElements.forEach(element => {
+                    // Set color on the element itself
+                    element.setAttribute('stroke', 'red');
+                    element.setAttribute('fill', 'red');
+                    // If it's a group, also set color on all children
+                    if (element.tagName === 'g') {
+                        const children = element.querySelectorAll('*');
+                        children.forEach(child => {
+                            child.setAttribute('stroke', 'red');
+                            child.setAttribute('fill', 'red');
+                        });
+                    }
+                });
+            } else if (currentBarElements.length > 0) {
+                console.log('VALID FINAL BAR: Duration is', currentBarDuration);
             }
         }
 
@@ -1833,8 +1964,21 @@
 
             // Create container for the tablature
             const container = document.createElement('div');
-            container.className = 'tabulature-embed';
+            container.className = 'tabulature-embed tablature-container';
             container.style.margin = '20px 0';
+
+            // Collect all rhythm data from sections
+            const allRhythms = [];
+            tabData.sections.forEach(section => {
+                if (section.rhythmData && section.rhythmData.length > 0) {
+                    allRhythms.push(...section.rhythmData);
+                }
+            });
+
+            // Store rhythm data as a data attribute for playback
+            if (allRhythms.length > 0) {
+                container.setAttribute('data-rhythm-sequence', JSON.stringify(allRhythms));
+            }
 
             // Render the tablature
             renderTabulature(container, tabData);
