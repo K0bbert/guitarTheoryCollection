@@ -571,6 +571,7 @@
 
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'rhythm-rest');
+        group.setAttribute('data-x', x);  // Store x position for progress bar
 
         // Determine rest type from rhythm symbol
         const baseRhythm = rhythm.replace('p', '').replace('.', '');
@@ -767,6 +768,7 @@
 
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'rhythm-stem');
+        group.setAttribute('data-x', x);  // Store x position for progress bar
 
         // Draw stem for all notes except whole notes (stem goes upward from note head)
         // Skip stem for whole notes (w, w., wt, wt.)
