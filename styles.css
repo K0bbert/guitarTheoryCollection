@@ -1,21 +1,21 @@
-body { 
-  font-family: Arial, sans-serif; 
-  margin: 16px; 
+body {
+  font-family: Arial, sans-serif;
+  margin: 16px;
 }
 
 /* increase page content width; change to 100% width with padding */
-.hub { 
-  width: 98%; 
-  max-width: 1850px; 
-  margin: 0 auto; 
+.hub {
+  width: 98%;
+  max-width: 1850px;
+  margin: 0 auto;
 }
 
-.links { 
-  margin-bottom: 20px; 
+.links {
+  margin-bottom: 20px;
 }
 
-.demo { 
-  margin-top: 18px; 
+.demo {
+  margin-top: 18px;
 }
 
 /* Burger Menu Styles */
@@ -70,6 +70,9 @@ body {
   transition: left 0.3s;
   z-index: 999;
   padding-top: 60px;
+  padding-bottom: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .burger-nav.open {

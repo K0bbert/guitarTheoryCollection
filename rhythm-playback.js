@@ -19,6 +19,29 @@
         rest: 400               // Rest (optional, lower tone)
     };
 
+    // Musical key frequencies (4th octave)
+    const KEY_FREQUENCIES = {
+        'C': 261.63,
+        'C#': 277.18,
+        'D': 293.66,
+        'D#': 311.13,
+        'E': 329.63,
+        'F': 349.23,
+        'F#': 369.99,
+        'G': 392.00,
+        'G#': 415.30,
+        'A': 440.00,
+        'A#': 466.16,
+        'B': 493.88
+    };
+
+    // Current note frequency (defaults to A)
+    let currentNoteFrequency = KEY_FREQUENCIES['A'];
+
+    // Global settings shared across all playback controls
+    let globalBPM = DEFAULT_BPM;
+    let globalKey = 'A';
+
     // Audio durations (in seconds)
     const DURATIONS = {
         metronomeClick: 0.05,   // Short click
@@ -417,7 +440,7 @@
             oscillator.connect(gainNode);
             gainNode.connect(ctx.destination);
 
-            oscillator.frequency.value = FREQUENCIES.note;
+            oscillator.frequency.value = currentNoteFrequency;
             oscillator.type = 'sine';
 
             gainNode.gain.setValueAtTime(0, time);
@@ -499,15 +522,6 @@
             font-size: 14px;
         `;
 
-        // BPM Control
-        const bpmLabel = document.createElement('label');
-        bpmLabel.style.cssText = 'display: flex; align-items: center; gap: 5px;';
-        bpmLabel.innerHTML = `
-            <span style="font-weight: 600;">BPM:</span>
-            <input type="number" class="bpm-input" value="${DEFAULT_BPM}" min="40" max="240" step="1"
-                   style="width: 60px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
-        `;
-
         // Play Button
         const playButton = document.createElement('button');
         playButton.className = 'play-button';
@@ -559,26 +573,63 @@
             <span style="font-weight: 600;">Count-in</span>
         `;
 
+        // Key Selection Dropdown
+        const keyLabel = document.createElement('label');
+        keyLabel.style.cssText = 'display: flex; align-items: center; gap: 5px;';
+        const keySelect = document.createElement('select');
+        keySelect.className = 'key-select';
+        keySelect.style.cssText = `
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+        `;
+
+        // Populate key options
+        const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        keys.forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            if (key === globalKey) option.selected = true;
+            keySelect.appendChild(option);
+        });
+
+        keyLabel.innerHTML = '<span style="font-weight: 600; margin-right: 5px;">Key:</span>';
+        keyLabel.appendChild(keySelect);
+
+        // Update frequency when key changes and sync across all controls
+        keySelect.addEventListener('change', (e) => {
+            globalKey = e.target.value;
+            currentNoteFrequency = KEY_FREQUENCIES[globalKey];
+            // Update all other key selects
+            document.querySelectorAll('.key-select').forEach(select => {
+                if (select !== e.target) {
+                    select.value = globalKey;
+                }
+            });
+        });
+
         // Status display
         const statusSpan = document.createElement('span');
         statusSpan.className = 'playback-status';
         statusSpan.style.cssText = 'color: #666; font-style: italic;';
 
-        controlsDiv.appendChild(bpmLabel);
         controlsDiv.appendChild(playButton);
         controlsDiv.appendChild(stopButton);
         controlsDiv.appendChild(loopLabel);
         controlsDiv.appendChild(countInLabel);
+        controlsDiv.appendChild(keyLabel);
         controlsDiv.appendChild(statusSpan);
 
         let currentPlayback = null;
 
         // Play button handler
         playButton.addEventListener('click', () => {
-            const bpmInput = bpmLabel.querySelector('.bpm-input');
             const loopCheckbox = loopLabel.querySelector('.loop-checkbox');
             const countInCheckbox = countInLabel.querySelector('.countin-checkbox');
-            const bpm = parseInt(bpmInput.value) || DEFAULT_BPM;
+            const bpm = globalBPM;
             const loop = loopCheckbox.checked;
             const countIn = countInCheckbox.checked;
 
@@ -687,11 +738,204 @@
         initAudioContext
     };
 
+    /**
+     * Standalone metronome for the navigation menu
+     */
+    let standaloneMetronome = null;
+
+    function initStandaloneMetronome() {
+        const startBtn = document.getElementById('metronome-start');
+        const stopBtn = document.getElementById('metronome-stop');
+        const bpmInput = document.getElementById('metronome-bpm');
+
+        if (!startBtn || !stopBtn || !bpmInput) return;
+
+        // Sync with global BPM value
+        bpmInput.value = globalBPM;
+
+        // Listen for BPM changes and sync
+        bpmInput.addEventListener('input', (e) => {
+            globalBPM = parseInt(e.target.value) || DEFAULT_BPM;
+            document.querySelectorAll('.bpm-input').forEach(input => {
+                input.value = globalBPM;
+            });
+        });
+
+        startBtn.addEventListener('click', () => {
+            const ctx = initAudioContext();
+            if (!ctx) return;
+
+            const bpm = parseInt(bpmInput.value) || DEFAULT_BPM;
+            const secondsPerBeat = 60 / bpm;
+
+            let isRunning = true;
+            let beatCount = 0;
+            let schedulerInterval = null;
+            let nextBeatTime = ctx.currentTime + 0.1; // Start 100ms in future for immediate response
+            let scheduledNodes = [];
+
+            function scheduleMetronome() {
+                if (!isRunning) return;
+
+                const lookAhead = 0.5;
+                while (nextBeatTime < ctx.currentTime + lookAhead) {
+                    const isStrongBeat = (beatCount % 4 === 0);
+
+                    // Schedule metronome click and track nodes
+                    const clickTime = nextBeatTime;
+
+                    // Create and schedule the click
+                    const bufferSize = ctx.sampleRate * 0.03;
+                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+
+                    const noise = ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'highpass';
+                    filter.frequency.value = isStrongBeat ? 2500 : 1500;
+                    filter.Q.value = 1;
+                    const gainNode = ctx.createGain();
+                    const volume = isStrongBeat ? 0.7 : 0.2;
+                    gainNode.gain.setValueAtTime(0, clickTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, clickTime + 0.001);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, clickTime + 0.03);
+                    noise.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+                    noise.start(clickTime);
+                    noise.stop(clickTime + 0.03);
+                    scheduledNodes.push(noise);
+
+                    // Add low frequency thump for strong beat
+                    if (isStrongBeat) {
+                        const lowOsc = ctx.createOscillator();
+                        const lowGain = ctx.createGain();
+                        lowOsc.frequency.value = 100;
+                        lowOsc.type = 'sine';
+                        lowGain.gain.setValueAtTime(0, clickTime);
+                        lowGain.gain.linearRampToValueAtTime(0.3, clickTime + 0.002);
+                        lowGain.gain.exponentialRampToValueAtTime(0.01, clickTime + 0.05);
+                        lowOsc.connect(lowGain);
+                        lowGain.connect(ctx.destination);
+                        lowOsc.start(clickTime);
+                        lowOsc.stop(clickTime + 0.05);
+                        scheduledNodes.push(lowOsc);
+                    }
+
+                    nextBeatTime += secondsPerBeat;
+                    beatCount++;
+                }
+            }
+
+            schedulerInterval = setInterval(scheduleMetronome, 100);
+            scheduleMetronome(); // Start immediately
+
+            standaloneMetronome = {
+                stop: () => {
+                    isRunning = false;
+                    if (schedulerInterval) {
+                        clearInterval(schedulerInterval);
+                    }
+                    // Stop all scheduled nodes
+                    scheduledNodes.forEach(node => {
+                        try {
+                            if (node.stop) node.stop();
+                        } catch (e) {
+                            // Node may have already finished
+                        }
+                    });
+                    scheduledNodes.length = 0;
+                }
+            };
+
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (standaloneMetronome) {
+                standaloneMetronome.stop();
+                standaloneMetronome = null;
+            }
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+        });
+
+        // Tap Tempo functionality
+        const tapBtn = document.getElementById('tap-tempo');
+        if (tapBtn) {
+            let tapTimes = [];
+            let tapTimeout = null;
+            const maxTaps = 4; // Use last 4 taps for averaging
+            const resetDelay = 2000; // Reset after 2 seconds of no tapping
+
+            tapBtn.addEventListener('click', () => {
+                const now = Date.now();
+                tapTimes.push(now);
+
+                // Clear existing timeout
+                if (tapTimeout) {
+                    clearTimeout(tapTimeout);
+                }
+
+                // Reset taps after inactivity
+                tapTimeout = setTimeout(() => {
+                    tapTimes = [];
+                    tapBtn.style.background = '#2196F3';
+                }, resetDelay);
+
+                // Keep only the last maxTaps
+                if (tapTimes.length > maxTaps) {
+                    tapTimes.shift();
+                }
+
+                // Calculate BPM if we have at least 2 taps
+                if (tapTimes.length >= 2) {
+                    // Calculate intervals between consecutive taps
+                    const intervals = [];
+                    for (let i = 1; i < tapTimes.length; i++) {
+                        intervals.push(tapTimes[i] - tapTimes[i - 1]);
+                    }
+
+                    // Average the intervals
+                    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+                    // Convert to BPM (60000 ms per minute)
+                    const bpm = Math.round(60000 / avgInterval);
+
+                    // Clamp to valid range
+                    const clampedBPM = Math.max(40, Math.min(240, bpm));
+
+                    // Update BPM input and sync
+                    bpmInput.value = clampedBPM;
+                    globalBPM = clampedBPM;
+                    document.querySelectorAll('.bpm-input').forEach(input => {
+                        input.value = clampedBPM;
+                    });
+
+                    // Visual feedback
+                    tapBtn.style.background = '#1976D2';
+                    setTimeout(() => {
+                        tapBtn.style.background = '#2196F3';
+                    }, 100);
+                }
+            });
+        }
+    }
+
     // Auto-initialize on page load and when content changes
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializePlaybackControls);
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePlaybackControls();
+            initStandaloneMetronome();
+        });
     } else {
         initializePlaybackControls();
+        initStandaloneMetronome();
     }
 
     // Also watch for dynamic content changes (when markdown is loaded)

@@ -36,7 +36,7 @@
     </ul>
 
     <!-- Controls Section -->
-    <div style="padding: 20px; border-top: 2px solid #eee; margin-top: 10px;">
+    <div style="padding: 20px; border-top: 2px solid #eee; margin-top: 10px; margin-bottom: 100px;">
       <h4 style="margin: 0 0 12px 0; color: #666; font-size: 13px; text-transform: uppercase;">Controls</h4>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <button id="toggle-labels" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">Intervals</button>
@@ -62,6 +62,23 @@
             <option value="11">D#/Eb</option>
           </select>
         </label>
+
+        <!-- Metronome Section -->
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #ddd;">
+          <h4 style="margin: 0 0 10px 0; color: #666; font-size: 13px; text-transform: uppercase;">Metronome</h4>
+          <div id="metronome-controls" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 5px; flex: 1;">
+                <span style="font-weight: 600; font-size: 12px; min-width: 35px;">BPM:</span>
+                <input type="number" id="metronome-bpm" value="120" min="40" max="240" step="1"
+                       style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; width: 60px;">
+              </label>
+              <button id="metronome-start" style="padding: 8px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">▶ Start</button>
+              <button id="metronome-stop" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; display: none;">■ Stop</button>
+            </div>
+            <button id="tap-tempo" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.1s;">Tap Tempo</button>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
