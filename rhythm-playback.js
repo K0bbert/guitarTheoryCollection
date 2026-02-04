@@ -42,6 +42,22 @@
     let globalBPM = DEFAULT_BPM;
     let globalKey = 'A';
 
+    // Map root note selector values to key names
+    const ROOT_NOTE_TO_KEY = {
+        '0': 'E',
+        '1': 'F',
+        '2': 'F#',
+        '3': 'G',
+        '4': 'G#',
+        '5': 'A',
+        '6': 'A#',
+        '7': 'B',
+        '8': 'C',
+        '9': 'C#',
+        '10': 'D',
+        '11': 'D#'
+    };
+
     // Audio durations (in seconds)
     const DURATIONS = {
         metronomeClick: 0.05,   // Short click
@@ -573,44 +589,6 @@
             <span style="font-weight: 600;">Count-in</span>
         `;
 
-        // Key Selection Dropdown
-        const keyLabel = document.createElement('label');
-        keyLabel.style.cssText = 'display: flex; align-items: center; gap: 5px;';
-        const keySelect = document.createElement('select');
-        keySelect.className = 'key-select';
-        keySelect.style.cssText = `
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-        `;
-
-        // Populate key options
-        const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        keys.forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            if (key === globalKey) option.selected = true;
-            keySelect.appendChild(option);
-        });
-
-        keyLabel.innerHTML = '<span style="font-weight: 600; margin-right: 5px;">Key:</span>';
-        keyLabel.appendChild(keySelect);
-
-        // Update frequency when key changes and sync across all controls
-        keySelect.addEventListener('change', (e) => {
-            globalKey = e.target.value;
-            currentNoteFrequency = KEY_FREQUENCIES[globalKey];
-            // Update all other key selects
-            document.querySelectorAll('.key-select').forEach(select => {
-                if (select !== e.target) {
-                    select.value = globalKey;
-                }
-            });
-        });
-
         // Status display
         const statusSpan = document.createElement('span');
         statusSpan.className = 'playback-status';
@@ -620,7 +598,6 @@
         controlsDiv.appendChild(stopButton);
         controlsDiv.appendChild(loopLabel);
         controlsDiv.appendChild(countInLabel);
-        controlsDiv.appendChild(keyLabel);
         controlsDiv.appendChild(statusSpan);
 
         let currentPlayback = null;
@@ -932,10 +909,36 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializePlaybackControls();
             initStandaloneMetronome();
+            initRootNoteSync();
         });
     } else {
         initializePlaybackControls();
         initStandaloneMetronome();
+        initRootNoteSync();
+    }
+
+    /**
+     * Sync root note selector with global key for playback
+     */
+    function initRootNoteSync() {
+        const rootNoteSelect = document.getElementById('root-note-select');
+        if (rootNoteSelect) {
+            // Set initial key from root note selector
+            const initialKey = ROOT_NOTE_TO_KEY[rootNoteSelect.value];
+            if (initialKey) {
+                globalKey = initialKey;
+                currentNoteFrequency = KEY_FREQUENCIES[initialKey];
+            }
+
+            // Listen for changes
+            rootNoteSelect.addEventListener('change', (e) => {
+                const key = ROOT_NOTE_TO_KEY[e.target.value];
+                if (key) {
+                    globalKey = key;
+                    currentNoteFrequency = KEY_FREQUENCIES[key];
+                }
+            });
+        }
     }
 
     // Also watch for dynamic content changes (when markdown is loaded)
