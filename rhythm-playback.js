@@ -188,64 +188,291 @@
     }
 
     /**
+     * Validate rhythm sequence - check if bars are complete (4 beats each)
+     * @param {Array} rhythmSequence - Array of {symbol, duration, isPause}
+     * @param {Array} rhythmData - Original rhythm data with barIndex
+     * @returns {Object} {isValid, errors: [{barIndex, expected, actual, difference}]}
+     */
+    function validateRhythmSequence(rhythmSequence, rhythmData) {
+        if (!rhythmData || rhythmData.length === 0) {
+            return { isValid: true, errors: [] };
+        }
+
+        const errors = [];
+        const barDurations = {};
+
+        // Group rhythms by bar and calculate duration for each bar
+        rhythmData.forEach((item, index) => {
+            const barIndex = item.barIndex || 0;
+            const duration = rhythmSequence[index]?.duration || 0;
+
+            if (!barDurations[barIndex]) {
+                barDurations[barIndex] = 0;
+            }
+            barDurations[barIndex] += duration;
+        });
+
+        // Check each bar (4 beats expected in 4/4 time)
+        Object.keys(barDurations).forEach(barIndex => {
+            const duration = barDurations[barIndex];
+            const difference = duration - 4.0;
+
+            // Use epsilon for floating point comparison (triplets create fractions)
+            if (Math.abs(difference) >= 0.001) {
+                errors.push({
+                    barIndex: parseInt(barIndex),
+                    expected: 4.0,
+                    actual: duration,
+                    difference: difference
+                });
+            }
+        });
+
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    /**
      * Play rhythm sequence with metronome
      * @param {Array} rhythmSequence - Array of {symbol, duration, isPause}
      * @param {number} bpm - Beats per minute
+     * @param {boolean} loop - Whether to loop playback
+     * @param {boolean} countIn - Whether to play a count-in before rhythm
      * @param {Function} onStop - Callback when playback finishes
      * @param {Function} onBeat - Callback for each beat (for visual feedback)
      */
-    function playRhythmSequence(rhythmSequence, bpm, onStop, onBeat) {
+    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, onStop, onBeat) {
         const ctx = initAudioContext();
         if (!ctx) {
             console.error('Failed to initialize audio context');
             return null;
         }
 
-        const beatsPerSecond = bpm / 60;
         const secondsPerBeat = 60 / bpm;
-
-        let currentTime = ctx.currentTime + 0.1; // Small delay before starting
-        let currentBeat = 0;
-
         const totalBeats = getTotalBeats(rhythmSequence);
         const totalDuration = totalBeats * secondsPerBeat;
+        const countInBeats = 4; // One full bar count-in
+        const countInDuration = countInBeats * secondsPerBeat;
 
-        // Schedule metronome clicks for each quarter note beat
-        const numMetronomeBeats = Math.ceil(totalBeats);
-        for (let beat = 0; beat < numMetronomeBeats; beat++) {
-            const beatTime = currentTime + (beat * secondsPerBeat);
-            const isStrongBeat = (beat % 4 === 0); // First beat of each 4/4 bar
+        // Track all scheduled timeouts and audio nodes for cleanup
+        const scheduledTimeouts = [];
+        const scheduledNodes = [];
+        let isRunning = true;
+        let schedulerInterval = null;
+        let nextIterationTime = null;
 
-            playMetronomeClick(isStrongBeat, beatTime);
-        }
+        /**
+         * Schedule count-in metronome clicks
+         */
+        function scheduleCountIn(startTime) {
+            if (!countIn) return startTime;
 
-        // Schedule note beeps based on rhythm
-        rhythmSequence.forEach((item, index) => {
-            const noteTime = currentTime + (currentBeat * secondsPerBeat);
-
-            // Callback for visual feedback
-            if (onBeat) {
-                const delay = (noteTime - ctx.currentTime) * 1000;
-                setTimeout(() => onBeat(index), delay);
+            // Schedule 4 count-in beats
+            for (let beat = 0; beat < countInBeats; beat++) {
+                const beatTime = startTime + (beat * secondsPerBeat);
+                const isStrongBeat = (beat % 4 === 0);
+                scheduleMetronomeClick(isStrongBeat, beatTime);
             }
 
-            // Play note beep (unless it's a rest/pause)
-            if (!item.isPause) {
-                playBeep(FREQUENCIES.note, DURATIONS.noteBeep, noteTime, 0.5);
-            }
-
-            currentBeat += item.duration;
-        });
-
-        // Schedule stop callback
-        if (onStop) {
-            const stopDelay = (totalDuration + 0.5) * 1000; // Add small buffer
-            setTimeout(onStop, stopDelay);
+            return startTime + countInDuration;
         }
 
+        /**
+         * Schedule one playthrough of the rhythm at a specific time
+         */
+        function schedulePlaythrough(startTime, includeCountIn) {
+            // Add count-in if requested
+            let rhythmStartTime = startTime;
+            if (includeCountIn) {
+                rhythmStartTime = scheduleCountIn(startTime);
+            }
+
+            let currentBeat = 0;
+
+            // Schedule metronome clicks for each quarter note beat
+            const numMetronomeBeats = Math.ceil(totalBeats);
+            for (let beat = 0; beat < numMetronomeBeats; beat++) {
+                const beatTime = rhythmStartTime + (beat * secondsPerBeat);
+                const isStrongBeat = (beat % 4 === 0);
+
+                // Create and schedule metronome click
+                scheduleMetronomeClick(isStrongBeat, beatTime);
+            }
+
+            // Schedule note beeps based on rhythm
+            rhythmSequence.forEach((item, index) => {
+                const noteTime = rhythmStartTime + (currentBeat * secondsPerBeat);
+
+                // Callback for visual feedback
+                if (onBeat) {
+                    const delay = (noteTime - ctx.currentTime) * 1000;
+                    if (delay > 0) {
+                        const timeout = setTimeout(() => {
+                            if (isRunning) onBeat(index);
+                        }, delay);
+                        scheduledTimeouts.push(timeout);
+                    }
+                }
+
+                // Play note beep (unless it's a rest/pause)
+                if (!item.isPause) {
+                    scheduleNoteBeep(noteTime);
+                }
+
+                currentBeat += item.duration;
+            });
+
+            // Calculate exact end time of this playthrough
+            const endTime = rhythmStartTime + totalDuration;
+            return endTime;
+        }
+
+        /**
+         * Look-ahead scheduler - schedules the next iteration when needed
+         */
+        function schedulerTick() {
+            if (!isRunning) return;
+
+            const lookAhead = 0.5; // Schedule 0.5 seconds in advance
+            const scheduleAheadTime = ctx.currentTime + lookAhead;
+
+            // If we need to schedule the next iteration
+            if (loop && (!nextIterationTime || nextIterationTime < scheduleAheadTime)) {
+                // Schedule next iteration
+                const iterationStart = nextIterationTime || ctx.currentTime;
+                nextIterationTime = schedulePlaythrough(iterationStart, true);
+            }
+        }
+
+        /**
+         * Schedule a metronome click
+         */
+        function scheduleMetronomeClick(isStrong, time) {
+            if (!ctx || !isRunning) return;
+
+            // Create noise buffer for click sound
+            const bufferSize = ctx.sampleRate * 0.03;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = isStrong ? 2500 : 1500;
+            filter.Q.value = 1;
+
+            const gainNode = ctx.createGain();
+            const volume = isStrong ? 0.7 : 0.2;
+
+            gainNode.gain.setValueAtTime(0, time);
+            gainNode.gain.linearRampToValueAtTime(volume, time + 0.001);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.03);
+
+            noise.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            noise.start(time);
+            noise.stop(time + 0.03);
+            scheduledNodes.push(noise);
+
+            // Add low frequency thump for strong beat
+            if (isStrong) {
+                const lowOsc = ctx.createOscillator();
+                const lowGain = ctx.createGain();
+
+                lowOsc.frequency.value = 100;
+                lowOsc.type = 'sine';
+
+                lowGain.gain.setValueAtTime(0, time);
+                lowGain.gain.linearRampToValueAtTime(0.3, time + 0.002);
+                lowGain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+
+                lowOsc.connect(lowGain);
+                lowGain.connect(ctx.destination);
+
+                lowOsc.start(time);
+                lowOsc.stop(time + 0.05);
+                scheduledNodes.push(lowOsc);
+            }
+        }
+
+        /**
+         * Schedule a note beep
+         */
+        function scheduleNoteBeep(time) {
+            if (!ctx || !isRunning) return;
+
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.frequency.value = FREQUENCIES.note;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0, time);
+            gainNode.gain.linearRampToValueAtTime(0.5, time + 0.01);
+            gainNode.gain.linearRampToValueAtTime(0, time + DURATIONS.noteBeep);
+
+            oscillator.start(time);
+            oscillator.stop(time + DURATIONS.noteBeep);
+            scheduledNodes.push(oscillator);
+        }
+
+        // Schedule the first playthrough
+        const firstEndTime = schedulePlaythrough(ctx.currentTime + 0.1, countIn);
+
+        // If looping, start the look-ahead scheduler
+        if (loop) {
+            nextIterationTime = firstEndTime;
+            schedulerInterval = setInterval(schedulerTick, 100); // Check every 100ms
+        } else {
+            // Schedule stop callback for non-looping playback
+            const stopDelay = (firstEndTime - ctx.currentTime + 0.1) * 1000;
+            const stopTimeout = setTimeout(() => {
+                if (isRunning && onStop) {
+                    onStop();
+                }
+            }, stopDelay);
+            scheduledTimeouts.push(stopTimeout);
+        }
+
+        // Return control object
         return {
             stop: () => {
-                // Can't really stop Web Audio scheduled sounds, but we can call the callback
+                isRunning = false;
+
+                // Stop the scheduler interval
+                if (schedulerInterval) {
+                    clearInterval(schedulerInterval);
+                    schedulerInterval = null;
+                }
+
+                // Clear all scheduled timeouts
+                scheduledTimeouts.forEach(timeout => clearTimeout(timeout));
+                scheduledTimeouts.length = 0;
+
+                // Stop all scheduled audio nodes
+                scheduledNodes.forEach(node => {
+                    try {
+                        if (node.stop) node.stop();
+                    } catch (e) {
+                        // Node may have already finished
+                    }
+                });
+                scheduledNodes.length = 0;
+
+                // Call the stop callback
                 if (onStop) onStop();
             },
             duration: totalDuration
@@ -316,6 +543,22 @@
         stopButton.onmouseover = () => stopButton.style.background = '#da190b';
         stopButton.onmouseout = () => stopButton.style.background = '#f44336';
 
+        // Loop Checkbox
+        const loopLabel = document.createElement('label');
+        loopLabel.style.cssText = 'display: flex; align-items: center; gap: 5px; cursor: pointer;';
+        loopLabel.innerHTML = `
+            <input type="checkbox" class="loop-checkbox" style="cursor: pointer;">
+            <span style="font-weight: 600;">Loop</span>
+        `;
+
+        // Count-in Checkbox
+        const countInLabel = document.createElement('label');
+        countInLabel.style.cssText = 'display: flex; align-items: center; gap: 5px; cursor: pointer;';
+        countInLabel.innerHTML = `
+            <input type="checkbox" class="countin-checkbox" checked style="cursor: pointer;">
+            <span style="font-weight: 600;">Count-in</span>
+        `;
+
         // Status display
         const statusSpan = document.createElement('span');
         statusSpan.className = 'playback-status';
@@ -324,6 +567,8 @@
         controlsDiv.appendChild(bpmLabel);
         controlsDiv.appendChild(playButton);
         controlsDiv.appendChild(stopButton);
+        controlsDiv.appendChild(loopLabel);
+        controlsDiv.appendChild(countInLabel);
         controlsDiv.appendChild(statusSpan);
 
         let currentPlayback = null;
@@ -331,7 +576,11 @@
         // Play button handler
         playButton.addEventListener('click', () => {
             const bpmInput = bpmLabel.querySelector('.bpm-input');
+            const loopCheckbox = loopLabel.querySelector('.loop-checkbox');
+            const countInCheckbox = countInLabel.querySelector('.countin-checkbox');
             const bpm = parseInt(bpmInput.value) || DEFAULT_BPM;
+            const loop = loopCheckbox.checked;
+            const countIn = countInCheckbox.checked;
 
             // Parse rhythm sequence
             const rhythmSequence = parseRhythmSequence(rhythmData);
@@ -341,15 +590,38 @@
                 return;
             }
 
+            // Validate rhythm sequence
+            const validation = validateRhythmSequence(rhythmSequence, rhythmData);
+            if (!validation.isValid) {
+                const barErrors = validation.errors.map(err => {
+                    const sign = err.difference > 0 ? '+' : '';
+                    return `Bar ${err.barIndex + 1}: ${sign}${err.difference.toFixed(2)} beats`;
+                }).join(', ');
+
+                statusSpan.textContent = `Cannot play: Invalid rhythm (${barErrors})`;
+                statusSpan.style.color = 'red';
+
+                // Reset color after 5 seconds
+                setTimeout(() => {
+                    statusSpan.style.color = '#666';
+                    statusSpan.textContent = '';
+                }, 5000);
+
+                return;
+            }
+
             // Show stop button, hide play button
             playButton.style.display = 'none';
             stopButton.style.display = 'inline-block';
-            statusSpan.textContent = 'Playing...';
+            statusSpan.textContent = loop ? 'Playing (looping)...' : 'Playing...';
+            statusSpan.style.color = '#666';
 
             // Start playback
             currentPlayback = playRhythmSequence(
                 rhythmSequence,
                 bpm,
+                loop,
+                countIn,
                 () => {
                     // On stop
                     playButton.style.display = 'inline-block';
@@ -359,7 +631,8 @@
                 },
                 (index) => {
                     // On each beat (for future visual feedback)
-                    statusSpan.textContent = `Playing note ${index + 1} of ${rhythmSequence.length}...`;
+                    const loopText = loop ? ' (looping)' : '';
+                    statusSpan.textContent = `Playing note ${index + 1} of ${rhythmSequence.length}${loopText}...`;
                 }
             );
         });
