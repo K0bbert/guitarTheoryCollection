@@ -279,10 +279,11 @@
      * @param {number} bpm - Beats per minute
      * @param {boolean} loop - Whether to loop playback
      * @param {boolean} countIn - Whether to play a count-in before rhythm
+     * @param {boolean} countInOnce - Whether to only count-in before the first iteration (only applies if loop is true)
      * @param {Function} onStop - Callback when playback finishes
      * @param {Function} onBeat - Callback for each beat (for visual feedback)
      */
-    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, onStop, onBeat) {
+    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, countInOnce, onStop, onBeat) {
         const ctx = initAudioContext();
         if (!ctx) {
             console.error('Failed to initialize audio context');
@@ -380,8 +381,10 @@
             // If we need to schedule the next iteration
             if (loop && (!nextIterationTime || nextIterationTime < scheduleAheadTime)) {
                 // Schedule next iteration
+                // If countInOnce is true, don't include count-in for subsequent iterations
+                const includeCountInForNext = countIn && !countInOnce;
                 const iterationStart = nextIterationTime || ctx.currentTime;
-                nextIterationTime = schedulePlaythrough(iterationStart, true);
+                nextIterationTime = schedulePlaythrough(iterationStart, includeCountInForNext);
             }
         }
 
@@ -631,6 +634,28 @@
             <span style="font-weight: 600;">Count-in</span>
         `;
 
+        // Once Checkbox (only shows when both Loop and Count-in are checked)
+        const onceLabel = document.createElement('label');
+        onceLabel.style.cssText = 'display: none; align-items: center; gap: 5px; cursor: pointer;';
+        onceLabel.innerHTML = `
+            <input type="checkbox" class="once-checkbox" style="cursor: pointer;">
+            <span style="font-weight: 600;">Once</span>
+        `;
+
+        // Show/hide "Once" checkbox based on Loop and Count-in states
+        const updateOnceVisibility = () => {
+            const loopCheckbox = loopLabel.querySelector('.loop-checkbox');
+            const countInCheckbox = countInLabel.querySelector('.countin-checkbox');
+            if (loopCheckbox.checked && countInCheckbox.checked) {
+                onceLabel.style.display = 'flex';
+            } else {
+                onceLabel.style.display = 'none';
+                // Uncheck "Once" when hiding it
+                const onceCheckbox = onceLabel.querySelector('.once-checkbox');
+                onceCheckbox.checked = false;
+            }
+        };
+
         // Status display
         const statusSpan = document.createElement('span');
         statusSpan.className = 'playback-status';
@@ -640,7 +665,14 @@
         controlsDiv.appendChild(stopButton);
         controlsDiv.appendChild(loopLabel);
         controlsDiv.appendChild(countInLabel);
+        controlsDiv.appendChild(onceLabel);
         controlsDiv.appendChild(statusSpan);
+
+        // Add event listeners to update "Once" visibility
+        const loopCheckbox = loopLabel.querySelector('.loop-checkbox');
+        const countInCheckbox = countInLabel.querySelector('.countin-checkbox');
+        loopCheckbox.addEventListener('change', updateOnceVisibility);
+        countInCheckbox.addEventListener('change', updateOnceVisibility);
 
         let currentPlayback = null;
 
@@ -648,9 +680,11 @@
         playButton.addEventListener('click', () => {
             const loopCheckbox = loopLabel.querySelector('.loop-checkbox');
             const countInCheckbox = countInLabel.querySelector('.countin-checkbox');
+            const onceCheckbox = onceLabel.querySelector('.once-checkbox');
             const bpm = globalBPM;
             const loop = loopCheckbox.checked;
             const countIn = countInCheckbox.checked;
+            const countInOnce = onceCheckbox.checked;
 
             // Parse rhythm sequence
             const rhythmSequence = parseRhythmSequence(rhythmData);
@@ -692,6 +726,7 @@
                 bpm,
                 loop,
                 countIn,
+                countInOnce,
                 () => {
                     // On stop
                     playButton.style.display = 'flex';
@@ -843,11 +878,11 @@
 
                         // Check if we're in a count-in period during a loop
                         // The first iteration doesn't have a count-in in elapsed time (it was before startTime),
-                        // but subsequent iterations do: [Rhythm1][CountIn2][Rhythm2][CountIn3]...
+                        // but subsequent iterations do: [Rhythm1][CountIn2][Rhythm2][CountIn3]... (unless countInOnce is true)
                         let normalizedBeat;
 
-                        if (loop && countIn && elapsed >= rhythmDuration) {
-                            // We're past the first iteration
+                        if (loop && countIn && !countInOnce && elapsed >= rhythmDuration) {
+                            // We're past the first iteration, and count-in happens before each loop
                             const elapsedAfterFirst = elapsed - rhythmDuration;
                             const positionInLoop = elapsedAfterFirst % loopDuration;
                             const numCompleteCycles = Math.floor(elapsedAfterFirst / loopDuration);
@@ -869,7 +904,8 @@
                             const adjustedBeat = totalBeatsIncludingCountIns - countInBeatsElapsed;
                             normalizedBeat = adjustedBeat % totalBeats;
                         } else {
-                            // First iteration or no looping - show the progress bar
+                            // First iteration, no looping, or countInOnce mode (no count-ins between loops)
+                            // In countInOnce mode: [Rhythm1][Rhythm2][Rhythm3]... (simple loop without count-ins)
                             progressBar.style.display = 'block';
                             normalizedBeat = currentBeat % totalBeats;
                         }
