@@ -829,18 +829,33 @@
                         const loopDuration = rhythmDuration + countInDuration;
 
                         // Check if we're in a count-in period during a loop
-                        if (loop && countIn) {
-                            const positionInLoop = elapsed % loopDuration;
-                            if (positionInLoop >= rhythmDuration) {
-                                // We're in the count-in period before next loop
-                                // Keep bar at last position or hide it
+                        // The first iteration doesn't have a count-in in elapsed time (it was before startTime),
+                        // but subsequent iterations do: [Rhythm1][CountIn2][Rhythm2][CountIn3]...
+                        let normalizedBeat;
+
+                        if (loop && countIn && elapsed >= rhythmDuration) {
+                            // We're past the first iteration
+                            const elapsedAfterFirst = elapsed - rhythmDuration;
+                            const positionInLoop = elapsedAfterFirst % loopDuration;
+                            const numCompleteCycles = Math.floor(elapsedAfterFirst / loopDuration);
+
+                            if (positionInLoop < countInDuration) {
+                                // We're in a count-in period - hide the progress bar
                                 progressBar.style.left = '0px';
                                 progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                                 return;
                             }
-                        }
 
-                        const normalizedBeat = currentBeat % totalBeats;
+                            // Calculate beat position, excluding count-in beats from the total
+                            // We've had (numCompleteCycles + 1) count-ins since the first rhythm ended
+                            const countInBeatsElapsed = (numCompleteCycles + 1) * countInBeats;
+                            const totalBeatsIncludingCountIns = elapsed / secondsPerBeat;
+                            const adjustedBeat = totalBeatsIncludingCountIns - countInBeatsElapsed;
+                            normalizedBeat = adjustedBeat % totalBeats;
+                        } else {
+                            // First iteration or no looping
+                            normalizedBeat = currentBeat % totalBeats;
+                        }
 
                         // Find position - stay at previous note during pauses, jump to notes when they play
                         let xPosition = 0;
