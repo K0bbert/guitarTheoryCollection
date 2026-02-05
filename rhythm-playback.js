@@ -828,6 +828,14 @@
                         const rhythmDuration = totalBeats * secondsPerBeat;
                         const loopDuration = rhythmDuration + countInDuration;
 
+                        // For non-looping playback, hide the bar once we've exceeded the duration
+                        // This prevents the bar from jumping back to the first note due to modulo wrap-around
+                        if (!loop && elapsed >= rhythmDuration) {
+                            progressBar.style.display = 'none';
+                            progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
+                            return;
+                        }
+
                         // Check if we're in a count-in period during a loop
                         // The first iteration doesn't have a count-in in elapsed time (it was before startTime),
                         // but subsequent iterations do: [Rhythm1][CountIn2][Rhythm2][CountIn3]...
