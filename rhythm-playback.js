@@ -811,9 +811,9 @@
                         const currentTime = ctx.currentTime;
                         const elapsed = currentTime - currentPlayback.startTime;
 
-                        // Don't show progress until playback actually starts
+                        // Don't show progress until playback actually starts (during initial count-in)
                         if (elapsed < 0) {
-                            progressBar.style.left = '0px';
+                            progressBar.style.display = 'none';
                             progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                             return;
                         }
@@ -841,10 +841,13 @@
 
                             if (positionInLoop < countInDuration) {
                                 // We're in a count-in period - hide the progress bar
-                                progressBar.style.left = '0px';
+                                progressBar.style.display = 'none';
                                 progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                                 return;
                             }
+
+                            // We're in a rhythm section - show the progress bar
+                            progressBar.style.display = 'block';
 
                             // Calculate beat position, excluding count-in beats from the total
                             // We've had (numCompleteCycles + 1) count-ins since the first rhythm ended
@@ -853,7 +856,8 @@
                             const adjustedBeat = totalBeatsIncludingCountIns - countInBeatsElapsed;
                             normalizedBeat = adjustedBeat % totalBeats;
                         } else {
-                            // First iteration or no looping
+                            // First iteration or no looping - show the progress bar
+                            progressBar.style.display = 'block';
                             normalizedBeat = currentBeat % totalBeats;
                         }
 
