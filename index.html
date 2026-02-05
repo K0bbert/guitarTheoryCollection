@@ -39,8 +39,10 @@
     <div style="padding: 20px; border-top: 2px solid #eee; margin-top: 10px; margin-bottom: 100px;">
       <h4 style="margin: 0 0 12px 0; color: #666; font-size: 13px; text-transform: uppercase;">Controls</h4>
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <button id="toggle-labels" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">Intervals</button>
-        <button id="toggle-enharmonic" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center;">♭</button>
+        <div style="display:flex; gap:10px;">
+          <button id="toggle-labels" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; flex:1;">Intervals</button>
+          <button id="toggle-enharmonic" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; flex:1;">♭</button>
+        </div>
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:#f9f9f9; border-radius:4px;">
           <input type="checkbox" id="toggle-all-notes" checked style="cursor:pointer;">
           <span>Show All Notes</span>
@@ -73,10 +75,10 @@
                 <input type="number" id="metronome-bpm" value="120" min="40" max="240" step="1"
                        style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; width: 60px;">
               </label>
-              <button id="metronome-start" style="padding: 8px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">▶ Start</button>
-              <button id="metronome-stop" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; display: none;">■ Stop</button>
+              <button id="metronome-start" style="padding: 8px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; display: flex; align-items: center; justify-content: center;">▶ Start</button>
+              <button id="metronome-stop" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap; display: none; align-items: center; justify-content: center;">■ Stop</button>
             </div>
-            <button id="tap-tempo" style="width: 100%; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.1s;">Tap Tempo</button>
+            <button id="tap-tempo" style="width: 100%; padding: 24px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: background 0.1s; display: flex; align-items: center; justify-content: center;">Tap Tempo</button>
           </div>
         </div>
       </div>

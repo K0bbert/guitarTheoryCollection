@@ -588,6 +588,9 @@
             cursor: pointer;
             font-weight: 600;
             transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
         playButton.onmouseover = () => playButton.style.background = '#45a049';
         playButton.onmouseout = () => playButton.style.background = '#4CAF50';
@@ -606,6 +609,8 @@
             font-weight: 600;
             transition: background 0.2s;
             display: none;
+            align-items: center;
+            justify-content: center;
         `;
         stopButton.onmouseover = () => stopButton.style.background = '#da190b';
         stopButton.onmouseout = () => stopButton.style.background = '#f44336';
@@ -677,7 +682,7 @@
 
             // Show stop button, hide play button
             playButton.style.display = 'none';
-            stopButton.style.display = 'inline-block';
+            stopButton.style.display = 'flex';
             statusSpan.textContent = loop ? 'Playing (looping)...' : 'Playing...';
             statusSpan.style.color = '#666';
 
@@ -689,7 +694,7 @@
                 countIn,
                 () => {
                     // On stop
-                    playButton.style.display = 'inline-block';
+                    playButton.style.display = 'flex';
                     stopButton.style.display = 'none';
                     statusSpan.textContent = '';
                     currentPlayback = null;
@@ -917,7 +922,7 @@
             if (progressBar) {
                 progressBar.style.display = 'none';
             }
-            playButton.style.display = 'inline-block';
+            playButton.style.display = 'flex';
             stopButton.style.display = 'none';
             statusSpan.textContent = '';
             currentPlayback = null;
@@ -1077,7 +1082,7 @@
             };
 
             startBtn.style.display = 'none';
-            stopBtn.style.display = 'block';
+            stopBtn.style.display = 'flex';
         });
 
         stopBtn.addEventListener('click', () => {
@@ -1085,7 +1090,7 @@
                 standaloneMetronome.stop();
                 standaloneMetronome = null;
             }
-            startBtn.style.display = 'block';
+            startBtn.style.display = 'flex';
             stopBtn.style.display = 'none';
         });
 
