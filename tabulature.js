@@ -1845,19 +1845,6 @@
                     group.appendChild(line);
                 } else {
                     // Render content (fret number, letter, symbol, etc.)
-                    const contentWidth = TAB_CONFIG.characterWidth * Math.max(1, renderedValue.length);
-
-                    // Keep spacing fixed, but visually interrupt a wider line area for long labels.
-                    const interruptionWidth = Math.max(TAB_CONFIG.characterWidth, Math.min(contentWidth, TAB_CONFIG.characterWidth * 3));
-                    const interruption = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    interruption.setAttribute('x', x + (TAB_CONFIG.characterWidth / 2) - (interruptionWidth / 2));
-                    interruption.setAttribute('y', yPosition - (TAB_CONFIG.stringStrokeWidth + 1));
-                    interruption.setAttribute('width', interruptionWidth);
-                    interruption.setAttribute('height', (TAB_CONFIG.stringStrokeWidth * 2) + 2);
-                    interruption.setAttribute('fill', 'white');
-                    interruption.setAttribute('class', 'tab-line-interruption');
-                    group.appendChild(interruption);
-
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     text.setAttribute('x', x + TAB_CONFIG.characterWidth / 2);
                     text.setAttribute('y', yPosition + 5); // Slight offset for better vertical centering
@@ -1865,6 +1852,12 @@
                     text.setAttribute('font-family', TAB_CONFIG.fontFamily);
                     text.setAttribute('font-size', TAB_CONFIG.fontSize);
                     text.setAttribute('font-weight', 'bold');
+                    // White halo guarantees the string line is visually cleared behind glyphs.
+                    text.setAttribute('paint-order', 'stroke');
+                    text.setAttribute('stroke', 'white');
+                    text.setAttribute('stroke-width', '4');
+                    text.setAttribute('stroke-linejoin', 'round');
+                    text.setAttribute('stroke-linecap', 'round');
                     text.setAttribute('fill', TAB_CONFIG.numberColor);
                     text.setAttribute('class', 'tab-content');
                     if (/\d/.test(token.value)) {
@@ -1872,6 +1865,39 @@
                     }
                     text.textContent = renderedValue;
                     group.appendChild(text);
+
+                    // Use the actual rendered glyph bounds so whitespace is balanced for tokens
+                    // like "s8" and "12bu", and ensure letters do not overlap the string line.
+                    let glyphBox = null;
+                    try {
+                        glyphBox = text.getBBox();
+                    } catch (e) {
+                        glyphBox = null;
+                    }
+
+                    const padX = 5;
+                    const padY = 2;
+                    const interruption = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
+                    if (glyphBox && isFinite(glyphBox.x) && isFinite(glyphBox.width)) {
+                        const top = Math.min(glyphBox.y - padY, yPosition - (TAB_CONFIG.stringStrokeWidth + 2));
+                        const bottom = Math.max(glyphBox.y + glyphBox.height + padY, yPosition + (TAB_CONFIG.stringStrokeWidth + 2));
+                        interruption.setAttribute('x', glyphBox.x - padX);
+                        interruption.setAttribute('y', top);
+                        interruption.setAttribute('width', glyphBox.width + (padX * 2));
+                        interruption.setAttribute('height', bottom - top);
+                    } else {
+                        const measuredWidth = text.getComputedTextLength() || (renderedValue.length * TAB_CONFIG.fontSize * 0.6);
+                        const interruptionWidth = Math.max(TAB_CONFIG.characterWidth, Math.min(measuredWidth + (padX * 2), TAB_CONFIG.characterWidth * 4));
+                        interruption.setAttribute('x', x + (TAB_CONFIG.characterWidth / 2) - (interruptionWidth / 2));
+                        interruption.setAttribute('y', yPosition - (TAB_CONFIG.stringStrokeWidth + 2));
+                        interruption.setAttribute('width', interruptionWidth);
+                        interruption.setAttribute('height', (TAB_CONFIG.stringStrokeWidth * 2) + 4);
+                    }
+
+                    interruption.setAttribute('fill', 'white');
+                    interruption.setAttribute('class', 'tab-line-interruption');
+                    group.insertBefore(interruption, text);
                 }
                 const rhythmCenterX = x + (TAB_CONFIG.characterWidth / 2);
                 const rhythmRenderX = x;
@@ -1992,25 +2018,7 @@
                 }
             }
 
-            // Add extra spacing if the previous token was a number and current is a technique letter
-            // or vice versa (for multi-note techniques like "4s6")
-            let extraSpacing = 0;
-            if (tokenIndex > 0 && tokenIndex < tokens.length) {
-                const prevToken = tokens[tokenIndex - 1];
-                const currToken = token;
-
-                // Check if we're in a multi-note sequence: number followed by letter, or letter followed by number
-                const prevIsDigit = prevToken.value && /\d/.test(prevToken.value);
-                const currIsLetter = currToken.value && /[hpsb]/.test(currToken.value);
-                const prevIsLetter = prevToken.value && /[hpsb]/.test(prevToken.value);
-                const currIsDigit = currToken.value && /\d/.test(currToken.value);
-
-                if ((prevIsDigit && currIsLetter) || (prevIsLetter && currIsDigit)) {
-                    extraSpacing = 1; // Add 1px spacing between numbers and technique letters
-                }
-            }
-
-            currentX += TAB_CONFIG.characterWidth + extraSpacing;
+            currentX += TAB_CONFIG.characterWidth;
         }
 
         // Finalize any remaining beaming groups at the end
@@ -2047,6 +2055,10 @@
                 console.log('VALID FINAL BAR: Duration is', currentBarDuration);
             }
         }
+
+        // Keep text and interruption masks above all line segments.
+        const overlayElements = group.querySelectorAll('.tab-line-interruption, .tab-content');
+        overlayElements.forEach(el => group.appendChild(el));
 
         svg.appendChild(group);
     }
