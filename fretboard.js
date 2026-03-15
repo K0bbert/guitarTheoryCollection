@@ -764,12 +764,31 @@ class Fretboard {
         }
     }
 
+    static emitDisplayStateChange() {
+        if (typeof document === 'undefined' || typeof CustomEvent === 'undefined') return;
+
+        let enharmonic = 0;
+        Fretboard.instances = Fretboard.instances || [];
+        if (Fretboard.instances.length > 0) {
+            enharmonic = Fretboard.instances[0].state.enharmonic || 0;
+        }
+
+        document.dispatchEvent(new CustomEvent('fretboard-display-change', {
+            detail: {
+                showLabels: !!Fretboard.showLabels,
+                showAllNotes: !!Fretboard.showAllNotes,
+                enharmonic: enharmonic,
+            }
+        }));
+    }
+
     static toggleShowLabels() {
         Fretboard.showLabels = !Fretboard.showLabels;
         Fretboard.instances = Fretboard.instances || [];
         for (let inst of Fretboard.instances) {
             inst.refreshNoteTexts();
         }
+        Fretboard.emitDisplayStateChange();
         return Fretboard.showLabels;
     }
 
@@ -779,6 +798,7 @@ class Fretboard {
         for (let inst of Fretboard.instances) {
             inst.refreshNoteTexts();
         }
+        Fretboard.emitDisplayStateChange();
     }
 
     static toggleEnharmonicAll() {
@@ -793,6 +813,7 @@ class Fretboard {
             inst.erase();
             inst.draw();
         }
+        Fretboard.emitDisplayStateChange();
         return sign;
     }
 
@@ -804,6 +825,7 @@ class Fretboard {
             inst.draw();
             inst.refreshNoteTexts();
         }
+        Fretboard.emitDisplayStateChange();
         return Fretboard.showAllNotes;
     }
 
@@ -815,6 +837,7 @@ class Fretboard {
             inst.draw();
             inst.refreshNoteTexts();
         }
+        Fretboard.emitDisplayStateChange();
     }
 
     static setRootNote(noteIndex) {

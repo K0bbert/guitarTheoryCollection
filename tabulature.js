@@ -29,6 +29,121 @@
         flagHeight: 6            // Height of flags
     };
 
+    const TAB_DISPLAY_EVENT = 'fretboard-display-change';
+    const TAB_NOTE_NAMES = [
+        ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'],
+        ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb']
+    ];
+    const DEFAULT_TUNING = ['E', 'B', 'G', 'D', 'A', 'E'];
+    const NOTE_INDEX_BY_NAME = {
+        'C': 8,
+        'B#': 8,
+        'C#': 9,
+        'Db': 9,
+        'D': 10,
+        'D#': 11,
+        'Eb': 11,
+        'E': 0,
+        'Fb': 0,
+        'E#': 1,
+        'F': 1,
+        'F#': 2,
+        'Gb': 2,
+        'G': 3,
+        'G#': 4,
+        'Ab': 4,
+        'A': 5,
+        'A#': 6,
+        'Bb': 6,
+        'B': 7,
+        'Cb': 7,
+    };
+    const renderedTabContainers = new Set();
+    let tabulatureDisplaySyncBound = false;
+
+    function getCurrentEnharmonicIndex() {
+        if (typeof Fretboard !== 'undefined' && Array.isArray(Fretboard.instances) && Fretboard.instances.length > 0) {
+            return Fretboard.instances[0].state.enharmonic || 0;
+        }
+        return 0;
+    }
+
+    function shouldRenderTabNotes() {
+        if (typeof Fretboard !== 'undefined' && typeof Fretboard.showLabels !== 'undefined') {
+            return !Fretboard.showLabels;
+        }
+        return false;
+    }
+
+    function normalizeTuningNoteName(noteName) {
+        if (!noteName) return '';
+        return noteName.trim().replace(/♯/g, '#').replace(/♭/g, 'b');
+    }
+
+    function getNoteIndex(noteName) {
+        const normalizedName = normalizeTuningNoteName(noteName);
+        return Object.prototype.hasOwnProperty.call(NOTE_INDEX_BY_NAME, normalizedName)
+            ? NOTE_INDEX_BY_NAME[normalizedName]
+            : null;
+    }
+
+    function getRenderedTokenValue(tokenValue, stringIndex, tuningNote) {
+        if (!shouldRenderTabNotes() || !tokenValue) {
+            return tokenValue;
+        }
+
+        const openStringNote = tuningNote || DEFAULT_TUNING[stringIndex] || DEFAULT_TUNING[DEFAULT_TUNING.length - 1];
+        const openStringIndex = getNoteIndex(openStringNote);
+        if (openStringIndex === null) {
+            return tokenValue;
+        }
+
+        if (!/\d/.test(tokenValue)) {
+            return '';
+        }
+
+        const renderedNotes = [];
+        const fretMatches = tokenValue.matchAll(/\((\d+)\)|(\d+)/g);
+
+        for (const match of fretMatches) {
+            const parenthesizedFret = match[1];
+            const fretDigits = match[2];
+            const fretValue = parseInt(parenthesizedFret || fretDigits, 10);
+            if (Number.isNaN(fretValue)) {
+                continue;
+            }
+
+            const noteName = TAB_NOTE_NAMES[getCurrentEnharmonicIndex()][(openStringIndex + fretValue) % 12];
+            if (!noteName) {
+                continue;
+            }
+
+            renderedNotes.push(parenthesizedFret ? `(${noteName})` : noteName);
+        }
+
+        return renderedNotes.join(' ');
+    }
+
+    function rerenderAllTabulature() {
+        for (const container of renderedTabContainers) {
+            if (!container.isConnected) {
+                renderedTabContainers.delete(container);
+                continue;
+            }
+
+            if (container._tabulatureData) {
+                renderTabulature(container, container._tabulatureData);
+            }
+        }
+    }
+
+    function bindTabulatureDisplaySync() {
+        if (tabulatureDisplaySyncBound || typeof document === 'undefined') return;
+
+        document.addEventListener(TAB_DISPLAY_EVENT, rerenderAllTabulature);
+        tabulatureDisplaySyncBound = true;
+    }
+
     /**
      * Parse rhythm line to extract rhythm symbols and their positions
      * Rhythm line format: "|-h---w-h.-w.-q--------q.-e--e.-t-t-t--------|"
@@ -1707,7 +1822,7 @@
                 text.setAttribute('font-weight', 'bold');
                 text.setAttribute('fill', TAB_CONFIG.numberColor);
                 text.setAttribute('class', 'tab-content');
-                text.textContent = token.value;
+                text.textContent = getRenderedTokenValue(token.value, stringIndex, tuningLabel);
                 group.appendChild(text);
 
                 // Track triplet groups (skip tokens without rhythms)
@@ -1885,6 +2000,8 @@
      * Render the complete tablature
      */
     function renderTabulature(container, tabData) {
+        container.innerHTML = '';
+
         // Render each section
         tabData.sections.forEach((section, sectionIndex) => {
             // Calculate SVG width by accounting for wide spacing and pauses
@@ -1940,6 +2057,8 @@
     function initTabulatureEmbeds(root) {
         if (!root) return;
 
+        bindTabulatureDisplaySync();
+
         const blocks = root.querySelectorAll('pre > code.language-tabulature');
         if (!blocks || blocks.length === 0) return;
 
@@ -1982,6 +2101,9 @@
                 container.setAttribute('data-rhythm-sequence', JSON.stringify(allRhythms));
             }
 
+            container._tabulatureData = tabData;
+            renderedTabContainers.add(container);
+
             // Render the tablature
             renderTabulature(container, tabData);
 
@@ -1996,6 +2118,8 @@
      * This is called by md-loader.js after markdown is loaded
      */
     function init() {
+        bindTabulatureDisplaySync();
+
         // Process any existing tabulature blocks in the document
         initTabulatureEmbeds(document.body);
     }
