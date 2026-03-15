@@ -366,7 +366,10 @@
 
             // Calculate exact end time of this playthrough
             const endTime = rhythmStartTime + totalDuration;
-            return endTime;
+            return {
+                rhythmStartTime: rhythmStartTime,
+                endTime: endTime
+            };
         }
 
         /**
@@ -384,7 +387,8 @@
                 // If countInOnce is true, don't include count-in for subsequent iterations
                 const includeCountInForNext = countIn && !countInOnce;
                 const iterationStart = nextIterationTime || ctx.currentTime;
-                nextIterationTime = schedulePlaythrough(iterationStart, includeCountInForNext);
+                const scheduledIteration = schedulePlaythrough(iterationStart, includeCountInForNext);
+                nextIterationTime = scheduledIteration.endTime;
             }
         }
 
@@ -472,16 +476,17 @@
         }
 
         // Schedule the first playthrough
-        const firstEndTime = schedulePlaythrough(ctx.currentTime + 0.1, countIn);
-        const actualStartTime = ctx.currentTime + 0.1 + (countIn ? countInDuration : 0);
+        const initialScheduleTime = ctx.currentTime + 0.1;
+        const firstIteration = schedulePlaythrough(initialScheduleTime, countIn);
+        const actualStartTime = firstIteration.rhythmStartTime;
 
         // If looping, start the look-ahead scheduler
         if (loop) {
-            nextIterationTime = firstEndTime;
+            nextIterationTime = firstIteration.endTime;
             schedulerInterval = setInterval(schedulerTick, 100); // Check every 100ms
         } else {
             // Schedule stop callback for non-looping playback
-            const stopDelay = (firstEndTime - ctx.currentTime + 0.1) * 1000;
+            const stopDelay = Math.max(0, (firstIteration.endTime - ctx.currentTime) * 1000);
             const stopTimeout = setTimeout(() => {
                 if (isRunning && onStop) {
                     onStop();
@@ -752,35 +757,26 @@
                 console.log('startTime:', currentPlayback.startTime, 'duration:', currentPlayback.duration);
                 progressBar.style.display = 'block';
 
-                // Get all rhythm elements from the SVG to find their positions
-                const rhythmElements = Array.from(tabSvg.querySelectorAll('.rhythm-stem, .rhythm-rest'));
-                console.log('Found rhythm elements:', rhythmElements.length);
-
-                // Also get tab content elements (the actual fret numbers) for better position mapping
-                const tabContentElements = Array.from(tabSvg.querySelectorAll('.tab-content'));
-                console.log('Found tab content elements:', tabContentElements.length);
-
-                // Build position map from tab content which should match the note count better
+                // Build position map from explicit per-note playback anchors.
                 const positionMap = [];
                 let cumulativeBeats = 0;
-                let tabContentIndex = 0; // Track which tab content element we're looking at
+                let playbackAnchorIndex = 0;
+
+                const playbackAnchors = Array.from(tabSvg.querySelectorAll('.playback-anchor'));
+                const playbackPositions = playbackAnchors
+                    .map(elem => parseFloat(elem.getAttribute('data-x')))
+                    .filter(x => !isNaN(x));
+
+                console.log('Found playback anchors:', playbackPositions.length);
 
                 rhythmSequence.forEach((note, index) => {
                     let xPosition = null;
 
-                    // Only map position for non-pause notes (pauses don't have tab content)
-                    if (!note.isPause && tabContentElements.length > 0) {
-                        // Get unique x positions from tab content
-                        const xPositions = new Set();
-                        tabContentElements.forEach(elem => {
-                            const x = parseFloat(elem.getAttribute('x'));
-                            if (!isNaN(x)) xPositions.add(x);
-                        });
-                        const uniqueX = Array.from(xPositions).sort((a, b) => a - b);
-
-                        if (uniqueX[tabContentIndex]) {
-                            xPosition = uniqueX[tabContentIndex];
-                            tabContentIndex++; // Move to next tab content position
+                    // Only map position for non-pause notes.
+                    if (!note.isPause && playbackPositions.length > 0) {
+                        if (typeof playbackPositions[playbackAnchorIndex] !== 'undefined') {
+                            xPosition = playbackPositions[playbackAnchorIndex];
+                            playbackAnchorIndex++;
                         }
                     }
 

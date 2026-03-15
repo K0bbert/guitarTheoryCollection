@@ -137,6 +137,18 @@
         }
     }
 
+    function renderPlaybackAnchor(svg, x) {
+        const anchor = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        anchor.setAttribute('cx', x + TAB_CONFIG.characterWidth / 2);
+        anchor.setAttribute('cy', TAB_CONFIG.paddingTop + (TAB_CONFIG.lineHeight * 2.5));
+        anchor.setAttribute('r', 1);
+        anchor.setAttribute('fill', 'transparent');
+        anchor.setAttribute('class', 'playback-anchor');
+        anchor.setAttribute('data-x', x + TAB_CONFIG.characterWidth / 2);
+        svg.appendChild(anchor);
+        return anchor;
+    }
+
     function bindTabulatureDisplaySync() {
         if (tabulatureDisplaySyncBound || typeof document === 'undefined') return;
 
@@ -1712,6 +1724,10 @@
 
                 // Render rhythm stem on the first string
                 if (stringIndex === 0 && token.rhythm) {
+                    if (!token.rhythm.includes('p')) {
+                        renderPlaybackAnchor(svg, x);
+                    }
+
                     const baseRhythm = getBaseRhythm(token.rhythm);
                     const hasDot = token.rhythm.includes('.');
 
@@ -1822,6 +1838,9 @@
                 text.setAttribute('font-weight', 'bold');
                 text.setAttribute('fill', TAB_CONFIG.numberColor);
                 text.setAttribute('class', 'tab-content');
+                if (/\d/.test(token.value)) {
+                    text.setAttribute('data-playback-note', '1');
+                }
                 text.textContent = getRenderedTokenValue(token.value, stringIndex, tuningLabel);
                 group.appendChild(text);
 
@@ -1846,6 +1865,10 @@
 
                 // Render rhythm stem on the first string (only for tokens with rhythm)
                 if (stringIndex === 0 && token.rhythm) {
+                    if (!token.rhythm.includes('p')) {
+                        renderPlaybackAnchor(svg, x);
+                    }
+
                     const baseRhythm = getBaseRhythm(token.rhythm);
                     const hasDot = token.rhythm.includes('.');
 
