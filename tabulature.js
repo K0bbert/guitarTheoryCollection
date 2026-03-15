@@ -1828,32 +1828,64 @@
                 currentX += width;
                 continue; // Skip the normal increment at the end
             } else if (token.type === 'content') {
-                // Render content (fret number, letter, symbol, etc.)
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', x + TAB_CONFIG.characterWidth / 2);
-                text.setAttribute('y', yPosition + 5); // Slight offset for better vertical centering
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('font-family', TAB_CONFIG.fontFamily);
-                text.setAttribute('font-size', TAB_CONFIG.fontSize);
-                text.setAttribute('font-weight', 'bold');
-                text.setAttribute('fill', TAB_CONFIG.numberColor);
-                text.setAttribute('class', 'tab-content');
-                if (/\d/.test(token.value)) {
-                    text.setAttribute('data-playback-note', '1');
+                const renderedValue = getRenderedTokenValue(token.value, stringIndex, tuningLabel);
+                const hiddenTechniqueOnly = !renderedValue || renderedValue.trim() === '';
+
+                if (hiddenTechniqueOnly) {
+                    // In note-name mode, technique-only tokens (h, p, s, etc.) are hidden.
+                    // Draw a normal string segment so the line is visually continuous again.
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x);
+                    line.setAttribute('y1', yPosition);
+                    line.setAttribute('x2', x + TAB_CONFIG.characterWidth);
+                    line.setAttribute('y2', yPosition);
+                    line.setAttribute('stroke', TAB_CONFIG.stringColor);
+                    line.setAttribute('stroke-width', TAB_CONFIG.stringStrokeWidth);
+                    line.setAttribute('class', 'tab-line-segment');
+                    group.appendChild(line);
+                } else {
+                    // Render content (fret number, letter, symbol, etc.)
+                    const contentWidth = TAB_CONFIG.characterWidth * Math.max(1, renderedValue.length);
+
+                    // Keep spacing fixed, but visually interrupt a wider line area for long labels.
+                    const interruptionWidth = Math.max(TAB_CONFIG.characterWidth, Math.min(contentWidth, TAB_CONFIG.characterWidth * 3));
+                    const interruption = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    interruption.setAttribute('x', x + (TAB_CONFIG.characterWidth / 2) - (interruptionWidth / 2));
+                    interruption.setAttribute('y', yPosition - (TAB_CONFIG.stringStrokeWidth + 1));
+                    interruption.setAttribute('width', interruptionWidth);
+                    interruption.setAttribute('height', (TAB_CONFIG.stringStrokeWidth * 2) + 2);
+                    interruption.setAttribute('fill', 'white');
+                    interruption.setAttribute('class', 'tab-line-interruption');
+                    group.appendChild(interruption);
+
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x + TAB_CONFIG.characterWidth / 2);
+                    text.setAttribute('y', yPosition + 5); // Slight offset for better vertical centering
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-family', TAB_CONFIG.fontFamily);
+                    text.setAttribute('font-size', TAB_CONFIG.fontSize);
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('fill', TAB_CONFIG.numberColor);
+                    text.setAttribute('class', 'tab-content');
+                    if (/\d/.test(token.value)) {
+                        text.setAttribute('data-playback-note', '1');
+                    }
+                    text.textContent = renderedValue;
+                    group.appendChild(text);
                 }
-                text.textContent = getRenderedTokenValue(token.value, stringIndex, tuningLabel);
-                group.appendChild(text);
+                const rhythmCenterX = x + (TAB_CONFIG.characterWidth / 2);
+                const rhythmRenderX = x;
 
                 // Track triplet groups (skip tokens without rhythms)
                 if (stringIndex === 0 && token.rhythm) {
                     if (isTriplet(token.rhythm)) {
                         if (tripletGroupStart === null) {
-                            tripletGroupStart = x;
+                            tripletGroupStart = rhythmRenderX;
                             tripletCount = 1;
-                            tripletStemPositions = [x + TAB_CONFIG.characterWidth / 2];
+                            tripletStemPositions = [rhythmCenterX];
                         } else {
                             tripletCount++;
-                            tripletStemPositions.push(x + TAB_CONFIG.characterWidth / 2);
+                            tripletStemPositions.push(rhythmCenterX);
                         }
                     } else if (tripletGroupStart !== null) {
                         // Non-triplet rhythm encountered, reset triplet tracking
@@ -1866,7 +1898,7 @@
                 // Render rhythm stem on the first string (only for tokens with rhythm)
                 if (stringIndex === 0 && token.rhythm) {
                     if (!token.rhythm.includes('p')) {
-                        renderPlaybackAnchor(svg, x);
+                        renderPlaybackAnchor(svg, rhythmRenderX);
                     }
 
                     const baseRhythm = getBaseRhythm(token.rhythm);
@@ -1892,7 +1924,7 @@
                         const isLastOfTriplet = (tripletCount === 3);
                         const tripletGroupX = isLastOfTriplet ? {firstStemX: tripletStemPositions[0], lastStemX: tripletStemPositions[2]} : null;
 
-                        const tripletElement = renderRhythmStem(svg, x, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
+                        const tripletElement = renderRhythmStem(svg, rhythmRenderX, token.rhythm, isFirstOfTriplet, isLastOfTriplet, tripletGroupX, false);
                         if (tripletElement) currentBarElements.push(tripletElement);
 
                         if (isLastOfTriplet) {
@@ -1926,7 +1958,7 @@
                             beamGroupRhythms = [];
                         }
 
-                        beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+                        beamGroup.push({x: rhythmRenderX, rhythm: token.rhythm, hasDot: hasDot});
                         beamGroupRhythms.push(token.rhythm);
 
                         // Update beat position and bar duration
@@ -1949,7 +1981,7 @@
                         }
 
                         // Render non-beamable note (w, h, q, etc.)
-                        const noteElement = renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                        const noteElement = renderRhythmStem(svg, rhythmRenderX, token.rhythm, false, false, null, false);
                         if (noteElement) currentBarElements.push(noteElement);
 
                         // Update beat position and bar duration

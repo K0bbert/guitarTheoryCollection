@@ -7,6 +7,8 @@
 
     // Audio context (initialized on first user interaction)
     let audioContext = null;
+    let cachedNoiseBuffer = null;
+    let cachedNoiseSampleRate = 0;
 
     // Default BPM
     const DEFAULT_BPM = 120;
@@ -64,6 +66,11 @@
         noteBeep: 0.1           // Slightly longer beep for notes
     };
 
+    // Small visual lead so the progress bar better matches perceived audio on the main thread.
+    const VISUAL_LEAD_SECONDS = 0.015; // 15ms
+    // Additional snap tolerance for event boundaries to avoid per-frame late jumps.
+    const BOUNDARY_SNAP_SECONDS = 0.008; // ~half frame at 60fps
+
     /**
      * Initialize the Audio Context (must be called after user interaction)
      */
@@ -74,6 +81,25 @@
         return audioContext;
     }
 
+    function getCachedNoiseBuffer(ctx) {
+        if (!ctx) return null;
+
+        if (!cachedNoiseBuffer || cachedNoiseSampleRate !== ctx.sampleRate) {
+            const bufferSize = Math.floor(ctx.sampleRate * 0.03);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            cachedNoiseBuffer = buffer;
+            cachedNoiseSampleRate = ctx.sampleRate;
+        }
+
+        return cachedNoiseBuffer;
+    }
+
     /**
      * Play a metronome click sound using noise for a realistic click
      * @param {boolean} isStrong - Whether this is a strong beat (first of bar)
@@ -82,19 +108,9 @@
     function playMetronomeClick(isStrong, time) {
         if (!audioContext) return;
 
-        // Create noise buffer for click sound
-        const bufferSize = audioContext.sampleRate * 0.03; // 30ms of noise
-        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        // Fill with white noise
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
-
         // Create buffer source
         const noise = audioContext.createBufferSource();
-        noise.buffer = buffer;
+        noise.buffer = getCachedNoiseBuffer(audioContext);
 
         // Create filter to shape the click sound
         const filter = audioContext.createBiquadFilter();
@@ -398,17 +414,8 @@
         function scheduleMetronomeClick(isStrong, time) {
             if (!ctx || !isRunning) return;
 
-            // Create noise buffer for click sound
-            const bufferSize = ctx.sampleRate * 0.03;
-            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const data = buffer.getChannelData(0);
-
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-
             const noise = ctx.createBufferSource();
-            noise.buffer = buffer;
+            noise.buffer = getCachedNoiseBuffer(ctx);
 
             const filter = ctx.createBiquadFilter();
             filter.type = 'highpass';
@@ -576,6 +583,8 @@
                 z-index: 1000;
                 box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
                 border-radius: 2px;
+                transform: translateX(0px);
+                will-change: transform;
             `;
             tabSvg.parentElement.insertBefore(progressBar, tabSvg);
             console.log('Progress bar created and inserted, height:', svgHeight);
@@ -739,11 +748,7 @@
                     statusSpan.textContent = '';
                     currentPlayback = null;
                 },
-                (index) => {
-                    // On each beat (for future visual feedback)
-                    const loopText = loop ? ' (looping)' : '';
-                    statusSpan.textContent = `Playing note ${index + 1} of ${rhythmSequence.length}${loopText}...`;
-                }
+                null
             );
 
             // Get progress bar and tablature SVG for visual feedback
@@ -753,8 +758,6 @@
 
             // Show progress bar AFTER playback is started
             if (progressBar && tabSvg && currentPlayback) {
-                console.log('Showing progress bar, currentPlayback:', currentPlayback);
-                console.log('startTime:', currentPlayback.startTime, 'duration:', currentPlayback.duration);
                 progressBar.style.display = 'block';
 
                 // Build position map from explicit per-note playback anchors.
@@ -763,11 +766,34 @@
                 let playbackAnchorIndex = 0;
 
                 const playbackAnchors = Array.from(tabSvg.querySelectorAll('.playback-anchor'));
-                const playbackPositions = playbackAnchors
+                let playbackPositions = playbackAnchors
                     .map(elem => parseFloat(elem.getAttribute('data-x')))
                     .filter(x => !isNaN(x));
 
-                console.log('Found playback anchors:', playbackPositions.length);
+                const nonPauseCount = rhythmSequence.filter(note => !note.isPause).length;
+
+                // Fallback for robustness: if anchors are missing/mismatched, derive positions
+                // from rendered rhythm stems/rests or note-content centers.
+                if (playbackPositions.length !== nonPauseCount) {
+                    const rhythmPositions = Array.from(tabSvg.querySelectorAll('.rhythm-stem, .rhythm-rest'))
+                        .map(elem => parseFloat(elem.getAttribute('data-x')))
+                        .filter(x => !isNaN(x))
+                        .map(x => x + 10); // convert stored left-x to visual center
+
+                    const contentPositions = Array.from(tabSvg.querySelectorAll('.tab-content[data-playback-note="1"]'))
+                        .map(elem => parseFloat(elem.getAttribute('x')))
+                        .filter(x => !isNaN(x));
+
+                    if (rhythmPositions.length === nonPauseCount) {
+                        playbackPositions = rhythmPositions;
+                    } else if (contentPositions.length === nonPauseCount) {
+                        playbackPositions = contentPositions;
+                    } else if (rhythmPositions.length > 0) {
+                        playbackPositions = rhythmPositions;
+                    } else if (contentPositions.length > 0) {
+                        playbackPositions = contentPositions;
+                    }
+                }
 
                 rhythmSequence.forEach((note, index) => {
                     let xPosition = null;
@@ -828,24 +854,31 @@
                     }
                 }
 
-                const totalBeats = getTotalBeats(rhythmSequence);
+                // Precompute the visual hold position for each event.
+                // During pauses we keep the bar on the latest previous note position.
+                let lastNoteX = 0;
+                for (let i = 0; i < positionMap.length; i++) {
+                    if (!positionMap[i].isPause) {
+                        lastNoteX = positionMap[i].xPosition;
+                    }
+                    positionMap[i].displayX = positionMap[i].isPause ? lastNoteX : positionMap[i].xPosition;
+                }
 
-                console.log('Position map built with', positionMap.length, 'points');
-                console.log('Total beats:', totalBeats);
-                console.log('Full position map:', positionMap);
+                const totalBeats = getTotalBeats(rhythmSequence);
+                let positionCursor = 0;
+                let lastNormalizedBeat = 0;
 
                 // Animation loop to update progress bar position
                 const updateProgressBar = () => {
                     if (!currentPlayback) {
                         progressBar.style.display = 'none';
-                        console.log('Progress bar hidden - no currentPlayback');
                         return;
                     }
 
                     const ctx = audioContext;
                     if (ctx && currentPlayback.startTime !== undefined) {
                         const currentTime = ctx.currentTime;
-                        const elapsed = currentTime - currentPlayback.startTime;
+                        const elapsed = (currentTime - currentPlayback.startTime) + VISUAL_LEAD_SECONDS;
 
                         // Don't show progress until playback actually starts (during initial count-in)
                         if (elapsed < 0) {
@@ -856,6 +889,7 @@
 
                         // Calculate current beat position
                         const secondsPerBeat = 60 / bpm;
+                        const boundarySnapBeats = BOUNDARY_SNAP_SECONDS / secondsPerBeat;
                         const currentBeat = elapsed / secondsPerBeat;
 
                         // Account for count-in during loops (4 beats count-in)
@@ -906,38 +940,28 @@
                             normalizedBeat = currentBeat % totalBeats;
                         }
 
-                        // Find position - stay at previous note during pauses, jump to notes when they play
-                        let xPosition = 0;
-
-                        for (let i = 0; i < positionMap.length; i++) {
-                            const current = positionMap[i];
-                            const nextBeatTime = current.beatTime + current.duration;
-
-                            if (normalizedBeat >= current.beatTime && normalizedBeat < nextBeatTime) {
-                                if (current.isPause) {
-                                    // During pause, stay at previous non-pause note position
-                                    for (let j = i - 1; j >= 0; j--) {
-                                        if (!positionMap[j].isPause) {
-                                            xPosition = positionMap[j].xPosition;
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    // During a note, stay at its position
-                                    xPosition = current.xPosition;
-                                }
-                                break;
-                            }
+                        // Cursor-based lookup keeps frame work constant even at high BPM.
+                        if (normalizedBeat < lastNormalizedBeat) {
+                            // Loop wrap-around
+                            positionCursor = 0;
                         }
 
-                        progressBar.style.left = xPosition + 'px';
+                        while (
+                            positionCursor < positionMap.length - 1 &&
+                            (normalizedBeat + boundarySnapBeats) >= (positionMap[positionCursor].beatTime + positionMap[positionCursor].duration)
+                        ) {
+                            positionCursor++;
+                        }
+
+                        const xPosition = positionMap[positionCursor].displayX;
+                        lastNormalizedBeat = normalizedBeat;
+
+                        progressBar.style.transform = `translateX(${xPosition}px)`;
                     }
 
                     progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                 };
                 updateProgressBar();
-            } else {
-                console.log('Cannot show progress bar - progressBar:', !!progressBar, 'tabSvg:', !!tabSvg, 'currentPlayback:', !!currentPlayback);
             }
         });
 
