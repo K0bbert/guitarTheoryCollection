@@ -143,7 +143,107 @@
 }
 ```
 
-### D5/ D5/ Csus2/ G5
+### D5/ F6 (alt. D5)/ Csus2/ G5
+
+Positions:
+
+```fretboard-grid
+{
+  "id": "chord-prog",
+  "rows": 1,
+  "cols": 4,
+  "width": 600,
+  "height": 260,
+  "transposable": false,
+  "items": [
+            { "startFret": 5, "endFret": 7,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": 5, "string": 5, "color": "red", "label": "R" },
+            { "fret": 7, "string": 4, "color": "red", "label": "P5" },
+            { "fret": 7, "string": 3, "color": "red", "label": "R" },
+            { "fret": "X", "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "D5" },
+
+            { "startFret": 7, "endFret": 8,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": 8, "string": 5, "color": "red", "label": "R" },
+            { "fret": 7, "string": 4, "color": "red", "label": "" },
+            { "fret": 7, "string": 3, "color": "red", "label": "" },
+            { "fret": "X", "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "F6" },
+
+            { "startFret": 3, "endFret": 7,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": 3, "string": 5, "color": "red", "label": "R" },
+            { "fret": 5, "string": 4, "color": "red", "label": "" },
+            { "fret": 7, "string": 3, "color": "red", "label": "" },
+            { "fret": "X", "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "Csus2" },
+
+            { "startFret": 3, "endFret": 7,   "notes": [
+            { "fret": 3, "string": 6, "color": "red", "label": "" },
+            { "fret": "X", "string": 5, "color": "red", "label": "" },
+            { "fret": 5, "string": 4, "color": "red", "label": "" },
+            { "fret": 7, "string": 3, "color": "red", "label": "" },
+            { "fret": "X", "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "G5" }
+  ]
+}
+```
+
+Alternative:
+
+```fretboard-grid
+{
+  "id": "chord-prog-alt",
+  "rows": 1,
+  "cols": 4,
+  "width": 300,
+  "height": 260,
+  "transposable": false,
+  "items": [
+            { "startFret": 5, "endFret": 7,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": 5, "string": 5, "color": "red", "label": "R" },
+            { "fret": 7, "string": 4, "color": "red", "label": "P5" },
+            { "fret": 7, "string": 3, "color": "red", "label": "R" },
+            { "fret": "X", "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "D5" },
+
+            { "startFret": 2, "endFret": 3,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": "X", "string": 5, "color": "red", "label": "" },
+            { "fret": 3, "string": 4, "color": "red", "label": "" },
+            { "fret": 2, "string": 3, "color": "red", "label": "" },
+            { "fret": 3, "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "F6" },
+
+            { "startFret": 2, "endFret": 3,   "notes": [
+            { "fret": "X", "string": 6, "color": "red", "label": "" },
+            { "fret": 3, "string": 5, "color": "red", "label": "" },
+            { "fret": "X", "string": 4, "color": "red", "label": "" },
+            { "fret": 0, "string": 3, "color": "red", "label": "" },
+            { "fret": 3, "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "Csus2" },
+
+            { "startFret": 2, "endFret": 3,   "notes": [
+            { "fret": 3, "string": 6, "color": "red", "label": "" },
+            { "fret": "X", "string": 5, "color": "red", "label": "" },
+            { "fret": 0, "string": 4, "color": "red", "label": "" },
+            { "fret": 0, "string": 3, "color": "red", "label": "" },
+            { "fret": 3, "string": 2, "color": "red", "label": "" },
+            { "fret": "X", "string": 1, "color": "red", "label": "" }
+          ], "title": "G5" }
+  ]
+}
+```
 
 Over D5/ D5/ Csus2 (Dm feel)
 
@@ -175,6 +275,31 @@ Over G5 (D dorian feel)
     "|----------------------------------------10-7-------|",
     "|---------------------------------------------------|",
     "|-s-s-s-s--s-s-s-s--s-s-s-s--s-s-s-s----------------|"
+  ]
+}
+```
+
+Alternative over D5/ F6 (alt. D5)/ Csus2/ G5:
+
+```tabulature
+{
+  "tuning" : "E A D G B E",
+  "content":[
+    "|------------------------------8-h12-10--8---------|------------|",
+    "|----------------------8---h10-------------10----8-|-10---------|",
+    "|-----------------7-h9------------------------10---|------------|",
+    "|---------7---h10----------------------------------|------------|",
+    "|----7 h8------------------------------------------|------------|",
+    "|-10-----------------------------------------------|------------|",
+    "|-s-s-s-s--s-s-s-s--s-s-s-s-s-s-s-s----------------|-w----------|",
+    "",
+    "|------------------------------8-h12-10--8---------|------------|",
+    "|----------------------8---h10-------------10----8-|-10bu-------|",
+    "|-----------------7-h9------------------------10---|-------7----|",
+    "|---------7---h10----------------------------------|------------|",
+    "|----7 h8------------------------------------------|------------|",
+    "|-10-----------------------------------------------|------------|",
+    "|-s-s-s-s--s-s-s-s--s-s-s-s-s-s-s-s----------------|-h-h--------|"
   ]
 }
 ```
