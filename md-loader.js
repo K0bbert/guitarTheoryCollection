@@ -66,6 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.initGlobalControls) {
                 try { window.initGlobalControls(); } catch (e) { /* ignore */ }
             }
+            // initialize key harmony map tool if present in injected markdown
+            if (window.initKeyChordMapView) {
+                try { window.initKeyChordMapView(); } catch (e) { console.error(e); }
+            }
         } catch (e) {
             console.warn('Failed to load markdown', path, e);
         }
