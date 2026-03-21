@@ -30,6 +30,8 @@
     };
 
     const TAB_DISPLAY_EVENT = 'fretboard-display-change';
+    const TAB_PENTATONIC_HIGHLIGHT_EVENT = 'tab-pentatonic-highlight-change';
+    const TAB_NOTE_MODE_EVENT = 'tab-note-mode-change';
     const TAB_NOTE_NAMES = [
         ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'],
         ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb']
@@ -60,6 +62,8 @@
     };
     const renderedTabContainers = new Set();
     let tabulatureDisplaySyncBound = false;
+    let tabulatureControlsBound = false;
+    let tabShowNoteNames = false;
 
     function getCurrentEnharmonicIndex() {
         if (typeof Fretboard !== 'undefined' && Array.isArray(Fretboard.instances) && Fretboard.instances.length > 0) {
@@ -68,11 +72,22 @@
         return 0;
     }
 
+    function getTabPentatonicToggleEnabled() {
+        if (typeof document === 'undefined') return false;
+        const checkbox = document.getElementById('toggle-tab-pentatonic-highlight');
+        return !!(checkbox && checkbox.checked);
+    }
+
     function shouldRenderTabNotes() {
-        if (typeof Fretboard !== 'undefined' && typeof Fretboard.showLabels !== 'undefined') {
-            return !Fretboard.showLabels;
-        }
-        return false;
+        return tabShowNoteNames;
+    }
+
+    function updateTabNoteModeButton() {
+        if (typeof document === 'undefined') return;
+        const button = document.getElementById('toggle-tab-fret-notes');
+        if (!button) return;
+
+        button.textContent = tabShowNoteNames ? 'Frets/ Notes: Notes' : 'Frets/ Notes: Frets';
     }
 
     function normalizeTuningNoteName(noteName) {
@@ -85,6 +100,53 @@
         return Object.prototype.hasOwnProperty.call(NOTE_INDEX_BY_NAME, normalizedName)
             ? NOTE_INDEX_BY_NAME[normalizedName]
             : null;
+    }
+
+    function getKeyPentatonicPitchClasses(keyText) {
+        if (!keyText || typeof window === 'undefined' || !window.ScaleDatabase) {
+            return [];
+        }
+        return window.ScaleDatabase.getPentatonicPitchClasses(keyText);
+    }
+
+    function isTokenInKeyPentatonic(tokenValue, stringIndex, tuningNote, keyText) {
+        if (!tokenValue || !keyText) return false;
+
+        const pentatonicPitchClasses = getKeyPentatonicPitchClasses(keyText);
+        if (!Array.isArray(pentatonicPitchClasses) || pentatonicPitchClasses.length === 0) {
+            return false;
+        }
+
+        const openStringNote = tuningNote || DEFAULT_TUNING[stringIndex] || DEFAULT_TUNING[DEFAULT_TUNING.length - 1];
+        const openStringIndex = getNoteIndex(openStringNote);
+        if (openStringIndex === null) {
+            return false;
+        }
+
+        const fretMatches = Array.from(tokenValue.matchAll(/\((\d+)\)|(\d+)/g));
+        if (fretMatches.length === 0) {
+            return false;
+        }
+
+        const pentatonicSet = new Set(pentatonicPitchClasses);
+        return fretMatches.every(match => {
+            const fretValue = parseInt(match[1] || match[2], 10);
+            if (Number.isNaN(fretValue)) {
+                return false;
+            }
+            const pitchClass = (openStringIndex + fretValue) % 12;
+            return pentatonicSet.has(pitchClass);
+        });
+    }
+
+    function getTokenFillColor(tokenValue, stringIndex, tuningNote, keyText) {
+        if (!getTabPentatonicToggleEnabled()) {
+            return TAB_CONFIG.numberColor;
+        }
+
+        return isTokenInKeyPentatonic(tokenValue, stringIndex, tuningNote, keyText)
+            ? '#1e63d6'
+            : TAB_CONFIG.numberColor;
     }
 
     function getRenderedTokenValue(tokenValue, stringIndex, tuningNote) {
@@ -153,7 +215,39 @@
         if (tabulatureDisplaySyncBound || typeof document === 'undefined') return;
 
         document.addEventListener(TAB_DISPLAY_EVENT, rerenderAllTabulature);
+        document.addEventListener(TAB_PENTATONIC_HIGHLIGHT_EVENT, rerenderAllTabulature);
+        document.addEventListener(TAB_NOTE_MODE_EVENT, rerenderAllTabulature);
         tabulatureDisplaySyncBound = true;
+    }
+
+    function bindTabulatureControls() {
+        if (tabulatureControlsBound || typeof document === 'undefined') return;
+
+        const noteModeButton = document.getElementById('toggle-tab-fret-notes');
+        const checkbox = document.getElementById('toggle-tab-pentatonic-highlight');
+
+        if (noteModeButton) {
+            updateTabNoteModeButton();
+            noteModeButton.addEventListener('click', () => {
+                tabShowNoteNames = !tabShowNoteNames;
+                updateTabNoteModeButton();
+                document.dispatchEvent(new CustomEvent(TAB_NOTE_MODE_EVENT, {
+                    detail: { showNoteNames: tabShowNoteNames }
+                }));
+            });
+        }
+
+        if (checkbox) {
+            checkbox.addEventListener('change', () => {
+                document.dispatchEvent(new CustomEvent(TAB_PENTATONIC_HIGHLIGHT_EVENT, {
+                    detail: { enabled: checkbox.checked }
+                }));
+            });
+        }
+
+        if (!noteModeButton && !checkbox) return;
+
+        tabulatureControlsBound = true;
     }
 
     /**
@@ -619,6 +713,21 @@
             }
         }
 
+        // Parse key if provided (e.g., Dmaj or F#min)
+        let key = null;
+        if (typeof config.key === 'string' && config.key.trim()) {
+            const normalizedKey = config.key.trim();
+            const parsedKey = (typeof window !== 'undefined' && window.ScaleDatabase)
+                ? window.ScaleDatabase.parseKeySignature(normalizedKey)
+                : null;
+
+            if (!parsedKey) {
+                console.warn('Invalid key: expected values like Dmaj or F#min, got', normalizedKey);
+            } else {
+                key = parsedKey.canonical;
+            }
+        }
+
         // Split content into sections by empty strings
         const sections = [];
         let currentSection = [];
@@ -683,7 +792,8 @@
 
         return {
             sections: parsedSections,
-            tuning: tuning
+            tuning: tuning,
+            key: key
         };
     }
 
@@ -1511,7 +1621,7 @@
     /**
      * Render a single tablature string (guitar string line)
      */
-    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel) {
+    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `tab-string tab-string-${stringIndex}`);
 
@@ -1858,7 +1968,7 @@
                     text.setAttribute('stroke-width', '4');
                     text.setAttribute('stroke-linejoin', 'round');
                     text.setAttribute('stroke-linecap', 'round');
-                    text.setAttribute('fill', TAB_CONFIG.numberColor);
+                    text.setAttribute('fill', getTokenFillColor(token.value, stringIndex, tuningLabel, key));
                     text.setAttribute('class', 'tab-content');
                     if (/\d/.test(token.value)) {
                         text.setAttribute('data-playback-note', '1');
@@ -2069,6 +2179,8 @@
     function renderTabulature(container, tabData) {
         container.innerHTML = '';
 
+        bindTabulatureControls();
+
         // Render each section
         tabData.sections.forEach((section, sectionIndex) => {
             // Calculate SVG width by accounting for wide spacing and pauses
@@ -2110,7 +2222,7 @@
                 const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
                 // Show tuning labels on all sections
                 const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
-                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel);
+                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key);
             }
 
             container.appendChild(svg);
@@ -2125,6 +2237,7 @@
         if (!root) return;
 
         bindTabulatureDisplaySync();
+        bindTabulatureControls();
 
         const blocks = root.querySelectorAll('pre > code.language-tabulature');
         if (!blocks || blocks.length === 0) return;
@@ -2186,6 +2299,7 @@
      */
     function init() {
         bindTabulatureDisplaySync();
+        bindTabulatureControls();
 
         // Process any existing tabulature blocks in the document
         initTabulatureEmbeds(document.body);

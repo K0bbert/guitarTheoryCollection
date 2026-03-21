@@ -37,7 +37,7 @@
 
     <!-- Controls Section -->
     <div style="padding: 20px; border-top: 2px solid #eee; margin-top: 10px; margin-bottom: 100px;">
-      <h4 style="margin: 0 0 12px 0; color: #666; font-size: 13px; text-transform: uppercase;">Controls</h4>
+      <h4 style="margin: 0 0 12px 0; color: #666; font-size: 13px; text-transform: uppercase;">Fretboard Controls</h4>
       <div style="display:flex; flex-direction:column; gap:10px;">
         <div style="display:flex; gap:10px;">
           <button id="toggle-labels" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; flex:1;">Intervals</button>
@@ -64,6 +64,17 @@
             <option value="11">D#/Eb</option>
           </select>
         </label>
+
+        <div style="margin-top: 10px; padding-top: 12px; border-top: 2px solid #ddd;">
+          <h4 style="margin: 0 0 10px 0; color: #666; font-size: 13px; text-transform: uppercase;">Tab Controls</h4>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button id="toggle-tab-fret-notes" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; width:100%;">Frets/ Notes: Frets</button>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:#f9f9f9; border-radius:4px;">
+              <input type="checkbox" id="toggle-tab-pentatonic-highlight" style="cursor:pointer;">
+              <span>Highlight Key Pentatonic</span>
+            </label>
+          </div>
+        </div>
 
         <!-- Metronome Section -->
         <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #ddd;">
@@ -116,6 +127,7 @@
   <script src="fretboard-grid.js"></script>
   <script src="mode-transformer.js"></script>
   <script src="harmonic-minor-mode-transformer.js"></script>
+  <script src="scale-database.js"></script>
   <script src="tabulature.js"></script>
   <script src="rhythm-playback.js"></script>
   <script src="md-loader.js"></script>
