@@ -12,6 +12,11 @@
 
     // Default BPM
     const DEFAULT_BPM = 120;
+    const DEFAULT_TIME_SIGNATURE = {
+        numerator: 4,
+        denominator: 4,
+        label: '4/4'
+    };
 
     // Audio frequencies
     const FREQUENCIES = {
@@ -43,6 +48,32 @@
     // Global settings shared across all playback controls
     let globalBPM = DEFAULT_BPM;
     let globalKey = 'A';
+    let globalTimeSignature = DEFAULT_TIME_SIGNATURE;
+
+    function parseTimeSignature(timeText) {
+        if (typeof timeText !== 'string' || !timeText.trim()) {
+            return DEFAULT_TIME_SIGNATURE;
+        }
+
+        const compact = timeText.trim().replace(/\s+/g, '');
+        const match = compact.match(/^(\d+)\/(\d+)$/);
+        if (!match) return DEFAULT_TIME_SIGNATURE;
+
+        const numerator = parseInt(match[1], 10);
+        const denominator = parseInt(match[2], 10);
+        if ((numerator === 3 || numerator === 4) && denominator === 4) {
+            return { numerator, denominator, label: `${numerator}/${denominator}` };
+        }
+
+        return DEFAULT_TIME_SIGNATURE;
+    }
+
+    function getBeatsPerBar(timeSignature) {
+        if (!timeSignature || typeof timeSignature.numerator !== 'number') {
+            return DEFAULT_TIME_SIGNATURE.numerator;
+        }
+        return timeSignature.numerator;
+    }
 
     // Map root note selector values to key names
     const ROOT_NOTE_TO_KEY = {
@@ -248,11 +279,12 @@
      * @param {Array} rhythmData - Original rhythm data with barIndex
      * @returns {Object} {isValid, errors: [{barIndex, expected, actual, difference}]}
      */
-    function validateRhythmSequence(rhythmSequence, rhythmData) {
+    function validateRhythmSequence(rhythmSequence, rhythmData, timeSignature) {
         if (!rhythmData || rhythmData.length === 0) {
             return { isValid: true, errors: [] };
         }
 
+        const beatsPerBar = getBeatsPerBar(timeSignature);
         const errors = [];
         const barDurations = {};
 
@@ -267,16 +299,16 @@
             barDurations[barIndex] += duration;
         });
 
-        // Check each bar (4 beats expected in 4/4 time)
+        // Check each bar against the active time signature.
         Object.keys(barDurations).forEach(barIndex => {
             const duration = barDurations[barIndex];
-            const difference = duration - 4.0;
+            const difference = duration - beatsPerBar;
 
             // Use epsilon for floating point comparison (triplets create fractions)
             if (Math.abs(difference) >= 0.001) {
                 errors.push({
                     barIndex: parseInt(barIndex),
-                    expected: 4.0,
+                    expected: beatsPerBar,
                     actual: duration,
                     difference: difference
                 });
@@ -299,17 +331,18 @@
      * @param {Function} onStop - Callback when playback finishes
      * @param {Function} onBeat - Callback for each beat (for visual feedback)
      */
-    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, countInOnce, onStop, onBeat) {
+    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, countInOnce, onStop, onBeat, timeSignature) {
         const ctx = initAudioContext();
         if (!ctx) {
             console.error('Failed to initialize audio context');
             return null;
         }
 
+        const beatsPerBar = getBeatsPerBar(timeSignature);
         const secondsPerBeat = 60 / bpm;
         const totalBeats = getTotalBeats(rhythmSequence);
         const totalDuration = totalBeats * secondsPerBeat;
-        const countInBeats = 4; // One full bar count-in
+        const countInBeats = beatsPerBar; // One full bar count-in
         const countInDuration = countInBeats * secondsPerBeat;
 
         // Track all scheduled timeouts and audio nodes for cleanup
@@ -325,10 +358,10 @@
         function scheduleCountIn(startTime) {
             if (!countIn) return startTime;
 
-            // Schedule 4 count-in beats
+            // Schedule one count-in bar
             for (let beat = 0; beat < countInBeats; beat++) {
                 const beatTime = startTime + (beat * secondsPerBeat);
-                const isStrongBeat = (beat % 4 === 0);
+                const isStrongBeat = (beat % beatsPerBar === 0);
                 scheduleMetronomeClick(isStrongBeat, beatTime);
             }
 
@@ -347,11 +380,11 @@
 
             let currentBeat = 0;
 
-            // Schedule metronome clicks for each quarter note beat
+            // Schedule metronome clicks for each quarter-note beat
             const numMetronomeBeats = Math.ceil(totalBeats);
             for (let beat = 0; beat < numMetronomeBeats; beat++) {
                 const beatTime = rhythmStartTime + (beat * secondsPerBeat);
-                const isStrongBeat = (beat % 4 === 0);
+                const isStrongBeat = (beat % beatsPerBar === 0);
 
                 // Create and schedule metronome click
                 scheduleMetronomeClick(isStrongBeat, beatTime);
@@ -702,6 +735,8 @@
 
             // Parse rhythm sequence
             const rhythmSequence = parseRhythmSequence(rhythmData);
+            const timeSignature = container._timeSignature || globalTimeSignature || DEFAULT_TIME_SIGNATURE;
+            const beatsPerBar = getBeatsPerBar(timeSignature);
 
             if (rhythmSequence.length === 0) {
                 statusSpan.textContent = 'No rhythm data to play';
@@ -709,7 +744,7 @@
             }
 
             // Validate rhythm sequence
-            const validation = validateRhythmSequence(rhythmSequence, rhythmData);
+            const validation = validateRhythmSequence(rhythmSequence, rhythmData, timeSignature);
             if (!validation.isValid) {
                 const barErrors = validation.errors.map(err => {
                     const sign = err.difference > 0 ? '+' : '';
@@ -748,7 +783,8 @@
                     statusSpan.textContent = '';
                     currentPlayback = null;
                 },
-                null
+                null,
+                timeSignature
             );
 
             // Get progress bar and tablature SVG for visual feedback
@@ -893,7 +929,7 @@
                         const currentBeat = elapsed / secondsPerBeat;
 
                         // Account for count-in during loops (4 beats count-in)
-                        const countInBeats = countIn ? 4 : 0;
+                        const countInBeats = countIn ? beatsPerBar : 0;
                         const countInDuration = countInBeats * secondsPerBeat;
                         const rhythmDuration = totalBeats * secondsPerBeat;
                         const loopDuration = rhythmDuration + countInDuration;
@@ -1006,7 +1042,13 @@
             const rhythmDataStr = tabContainer.getAttribute('data-rhythm-sequence');
             if (rhythmDataStr) {
                 try {
-                    const rhythmData = JSON.parse(rhythmDataStr);
+                    const parsed = JSON.parse(rhythmDataStr);
+                    const rhythmData = Array.isArray(parsed) ? parsed : (parsed.rhythms || []);
+                    const parsedTimeSignature = Array.isArray(parsed)
+                        ? DEFAULT_TIME_SIGNATURE
+                        : (parsed.timeSignature || DEFAULT_TIME_SIGNATURE);
+
+                    tabContainer._timeSignature = parsedTimeSignature;
                     createPlaybackControls(tabContainer, rhythmData);
                 } catch (e) {
                     console.error('Failed to parse rhythm data:', e);
@@ -1032,11 +1074,15 @@
         const startBtn = document.getElementById('metronome-start');
         const stopBtn = document.getElementById('metronome-stop');
         const bpmInput = document.getElementById('metronome-bpm');
+        const timeSignatureSelect = document.getElementById('metronome-time-signature');
 
         if (!startBtn || !stopBtn || !bpmInput) return;
 
-        // Sync with global BPM value
+        // Sync with global values
         bpmInput.value = globalBPM;
+        if (timeSignatureSelect) {
+            timeSignatureSelect.value = globalTimeSignature.label || DEFAULT_TIME_SIGNATURE.label;
+        }
 
         // Listen for BPM changes and sync
         bpmInput.addEventListener('input', (e) => {
@@ -1046,12 +1092,19 @@
             });
         });
 
+        if (timeSignatureSelect) {
+            timeSignatureSelect.addEventListener('change', (e) => {
+                globalTimeSignature = parseTimeSignature(e.target.value);
+            });
+        }
+
         startBtn.addEventListener('click', () => {
             const ctx = initAudioContext();
             if (!ctx) return;
 
             const bpm = parseInt(bpmInput.value) || DEFAULT_BPM;
             const secondsPerBeat = 60 / bpm;
+            const beatsPerBar = getBeatsPerBar(globalTimeSignature);
 
             let isRunning = true;
             let beatCount = 0;
@@ -1064,7 +1117,7 @@
 
                 const lookAhead = 0.5;
                 while (nextBeatTime < ctx.currentTime + lookAhead) {
-                    const isStrongBeat = (beatCount % 4 === 0);
+                    const isStrongBeat = (beatCount % beatsPerBar === 0);
 
                     // Schedule metronome click and track nodes
                     const clickTime = nextBeatTime;

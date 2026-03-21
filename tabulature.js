@@ -37,6 +37,11 @@
         ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb']
     ];
     const DEFAULT_TUNING = ['E', 'B', 'G', 'D', 'A', 'E'];
+    const DEFAULT_TIME_SIGNATURE = {
+        numerator: 4,
+        denominator: 4,
+        label: '4/4'
+    };
     const NOTE_INDEX_BY_NAME = {
         'C': 8,
         'B#': 8,
@@ -119,6 +124,36 @@
     function normalizeTuningNoteName(noteName) {
         if (!noteName) return '';
         return noteName.trim().replace(/♯/g, '#').replace(/♭/g, 'b');
+    }
+
+    function parseTimeSignature(timeText) {
+        if (typeof timeText !== 'string' || !timeText.trim()) {
+            return DEFAULT_TIME_SIGNATURE;
+        }
+
+        const compact = timeText.trim().replace(/\s+/g, '');
+        const match = compact.match(/^(\d+)\/(\d+)$/);
+        if (!match) {
+            return DEFAULT_TIME_SIGNATURE;
+        }
+
+        const numerator = parseInt(match[1], 10);
+        const denominator = parseInt(match[2], 10);
+
+        if (Number.isNaN(numerator) || Number.isNaN(denominator)) {
+            return DEFAULT_TIME_SIGNATURE;
+        }
+
+        if ((numerator === 3 || numerator === 4) && denominator === 4) {
+            return {
+                numerator,
+                denominator,
+                label: `${numerator}/${denominator}`
+            };
+        }
+
+        console.warn('Unsupported time signature:', compact, '- falling back to 4/4');
+        return DEFAULT_TIME_SIGNATURE;
     }
 
     function getNoteIndex(noteName) {
@@ -801,6 +836,7 @@
         }
 
         const lines = config.content;
+        const timeSignature = parseTimeSignature(config.time);
 
         // Parse tuning if provided
         let tuning = null;
@@ -900,7 +936,8 @@
             sections: parsedSections,
             tuning: tuning,
             key: key,
-            keyRootPitchClass: keyRootPitchClass
+            keyRootPitchClass: keyRootPitchClass,
+            timeSignature: timeSignature
         };
     }
 
@@ -1656,7 +1693,7 @@
      * 2. Break when a note starts on a beat boundary (except for dotted patterns that complete a beat)
      * 3. For mixed subdivisions, break if previous note crosses a beat boundary
      */
-    function shouldBreakBeam(beamGroupRhythms, currentRhythm, currentBeatPos) {
+    function shouldBreakBeam(beamGroupRhythms, currentRhythm, currentBeatPos, beatsPerBar) {
         if (beamGroupRhythms.length === 0) return false;
 
         const currentDuration = getRhythmDuration(currentRhythm);
@@ -1669,30 +1706,31 @@
         console.log('shouldBreakBeam:', {
             prevRhythm, currentRhythm,
             prevBeatPos, currentStartPos, prevStartPos,
-            crossesBoundary: prevBeatPos <= 2.0 && currentStartPos >= 2.0
+            beatsPerBar,
+            crossesBoundary: prevBeatPos <= (beatsPerBar / 2) && currentStartPos >= (beatsPerBar / 2)
         });
 
-        // CRITICAL RULE: Never beam across the middle of a 4/4 bar (beat 2-3 boundary at position 2.0)
-        // This means: don't beam notes where one ends at/before 2.0 and the next starts at/after 2.0
-        if (prevBeatPos <= 2.0 && currentStartPos >= 2.0) {
+        // 4/4: keep two-beat grouping by preventing beams over beat 2|3.
+        const halfBarBoundary = beatsPerBar / 2;
+        if (beatsPerBar === 4 && prevBeatPos <= halfBarBoundary && currentStartPos >= halfBarBoundary) {
             // Check if this is a special e.+s pattern
             const prevBase = getBaseRhythm(prevRhythm);
             const currBase = getBaseRhythm(currentRhythm);
             const isEDotS = prevRhythm.includes('.') && prevBase === 'e' && currBase === 's';
-            const prevStartsAfter2 = prevStartPos >= 2.0;
+            const prevStartsAfterBoundary = prevStartPos >= halfBarBoundary;
 
-            console.log('  -> At 2.0 boundary:', { prevBase, currBase, isEDotS, prevStartsAfter2 });
+            console.log('  -> At half-bar boundary:', { prevBase, currBase, isEDotS, prevStartsAfterBoundary });
 
             // Only allow e.+s to beam across 2.0 if BOTH notes are after the boundary
             // (e.g., e. at 2.0-2.75, s at 2.75-3.0 is allowed)
-            if (isEDotS && prevStartsAfter2) {
+            if (isEDotS && prevStartsAfterBoundary) {
                 // Exception: allow this e.+s pattern
                 console.log('  -> Exception: allowing e.+s pattern');
                 return false;
             }
 
-            // Otherwise, always break at the 2.0 boundary
-            console.log('  -> Breaking at 2.0 boundary');
+            // Otherwise, always break at the half-bar boundary.
+            console.log('  -> Breaking at half-bar boundary');
             return true;
         }
 
@@ -1703,11 +1741,12 @@
             const prevBase = getBaseRhythm(prevRhythm);
             const currBase = getBaseRhythm(currentRhythm);
 
-            // Allow simple eighth note patterns to beam across beat 1 and 3
+            // 4/4 allows simple eighth-note patterns over beat 1 and 3 boundaries.
+            // 3/4 should keep beat groups tighter and break at every beat boundary.
             const isSimpleEighths = !prevRhythm.includes('.') && !currentRhythm.includes('.') &&
                                    prevBase === 'e' && currBase === 'e';
 
-            if (!isSimpleEighths) {
+            if (beatsPerBar !== 4 || !isSimpleEighths) {
                 console.log('  -> Breaking at beat boundary', currentStartPos);
                 return true;
             }
@@ -1728,9 +1767,12 @@
     /**
      * Render a single tablature string (guitar string line)
      */
-    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key, keyRootPitchClass) {
+    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key, keyRootPitchClass, timeSignature) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `tab-string tab-string-${stringIndex}`);
+        const beatsPerBar = (timeSignature && typeof timeSignature.numerator === 'number')
+            ? timeSignature.numerator
+            : DEFAULT_TIME_SIGNATURE.numerator;
 
         // Render tuning label if provided
         if (tuningLabel) {
@@ -1791,11 +1833,11 @@
 
                     // Validate bar duration and color elements red if invalid
                     // Use epsilon for floating point comparison (triplets create fractions)
-                    const isValidBar = Math.abs(currentBarDuration - 4.0) < 0.001;
+                    const isValidBar = Math.abs(currentBarDuration - beatsPerBar) < 0.001;
                     let barError = null;
                     if (!isValidBar && currentBarElements.length > 0) {
-                        barError = currentBarDuration - 4.0;
-                        console.log('INVALID BAR: Duration is', currentBarDuration, 'but should be 4.0');
+                        barError = currentBarDuration - beatsPerBar;
+                        console.log('INVALID BAR: Duration is', currentBarDuration, 'but should be', beatsPerBar);
                         currentBarElements.forEach(element => {
                             // Set color on the element itself
                             element.setAttribute('stroke', 'red');
@@ -1991,7 +2033,7 @@
                         console.log('Processing beamable note:', token.rhythm, 'beatPos:', currentBeatPosition, '->', beatPosAfterNote, 'current group size:', beamGroupRhythms.length);
 
                         // Check if we should break the beam based on beat position
-                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote)) {
+                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote, beatsPerBar)) {
                             // Finalize current group before starting new one
                             console.log('  -> BREAKING: Finalizing group of', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
                             if (beamGroup.length >= 2) {
@@ -2188,7 +2230,7 @@
                         const beatPosAfterNote = currentBeatPosition + noteDuration;
 
                         // Check if we should break the beam based on beat position
-                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote)) {
+                        if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote, beatsPerBar)) {
                             // Finalize current group before starting new one
                             if (beamGroup.length >= 2) {
                                 const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
@@ -2252,9 +2294,9 @@
 
             // Validate final bar if it has any elements
             // Use epsilon for floating point comparison (triplets create fractions)
-            const isValidBar = Math.abs(currentBarDuration - 4.0) < 0.001;
+            const isValidBar = Math.abs(currentBarDuration - beatsPerBar) < 0.001;
             if (!isValidBar && currentBarElements.length > 0) {
-                console.log('INVALID FINAL BAR: Duration is', currentBarDuration, 'but should be 4.0');
+                console.log('INVALID FINAL BAR: Duration is', currentBarDuration, 'but should be', beatsPerBar);
                 currentBarElements.forEach(element => {
                     // Set color on the element itself
                     element.setAttribute('stroke', 'red');
@@ -2329,7 +2371,7 @@
                 const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
                 // Show tuning labels on all sections
                 const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
-                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key, tabData.keyRootPitchClass);
+                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key, tabData.keyRootPitchClass, tabData.timeSignature);
             }
 
             container.appendChild(svg);
@@ -2385,7 +2427,10 @@
 
             // Store rhythm data as a data attribute for playback
             if (allRhythms.length > 0) {
-                container.setAttribute('data-rhythm-sequence', JSON.stringify(allRhythms));
+                container.setAttribute('data-rhythm-sequence', JSON.stringify({
+                    rhythms: allRhythms,
+                    timeSignature: tabData.timeSignature || DEFAULT_TIME_SIGNATURE
+                }));
             }
 
             container._tabulatureData = tabData;
