@@ -68,7 +68,21 @@
         <div style="margin-top: 10px; padding-top: 12px; border-top: 2px solid #ddd;">
           <h4 style="margin: 0 0 10px 0; color: #666; font-size: 13px; text-transform: uppercase;">Tab Controls</h4>
           <div style="display:flex; flex-direction:column; gap:10px;">
-            <button id="toggle-tab-fret-notes" class="label-toggle-button" style="padding:10px; background:white; border:1px solid #ccc; border-radius:4px; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; width:100%;">Frets/ Notes: Frets</button>
+            <label style="display:flex; flex-direction:column; gap:8px; padding:10px; background:#f9f9f9; border-radius:4px;">
+              <span style="font-weight:600; font-size:12px;">Tab Display:</span>
+              <label for="tab-display-mode-frets" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="radio" name="tab-display-mode" id="tab-display-mode-frets" value="frets" checked style="cursor:pointer;">
+                <span>Frets</span>
+              </label>
+              <label for="tab-display-mode-notes" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="radio" name="tab-display-mode" id="tab-display-mode-notes" value="notes" style="cursor:pointer;">
+                <span>Notes</span>
+              </label>
+              <label for="tab-display-mode-intervals" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="radio" name="tab-display-mode" id="tab-display-mode-intervals" value="intervals" style="cursor:pointer;">
+                <span>Intervals</span>
+              </label>
+            </label>
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:#f9f9f9; border-radius:4px;">
               <input type="checkbox" id="toggle-tab-pentatonic-highlight" style="cursor:pointer;">
               <span>Highlight Key Pentatonic</span>

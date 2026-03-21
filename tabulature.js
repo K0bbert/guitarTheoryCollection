@@ -63,7 +63,22 @@
     const renderedTabContainers = new Set();
     let tabulatureDisplaySyncBound = false;
     let tabulatureControlsBound = false;
-    let tabShowNoteNames = false;
+    let tabDisplayMode = 'frets';
+
+    const INTERVAL_LABELS = {
+        0: 'R',
+        1: 'm2',
+        2: 'M2',
+        3: 'm3',
+        4: 'M3',
+        5: 'P4',
+        6: 'b5',
+        7: 'P5',
+        8: 'm6',
+        9: 'M6',
+        10: 'm7',
+        11: 'M7'
+    };
 
     function getCurrentEnharmonicIndex() {
         if (typeof Fretboard !== 'undefined' && Array.isArray(Fretboard.instances) && Fretboard.instances.length > 0) {
@@ -79,15 +94,26 @@
     }
 
     function shouldRenderTabNotes() {
-        return tabShowNoteNames;
+        return tabDisplayMode === 'notes';
     }
 
-    function updateTabNoteModeButton() {
-        if (typeof document === 'undefined') return;
-        const button = document.getElementById('toggle-tab-fret-notes');
-        if (!button) return;
+    function shouldRenderTabIntervals() {
+        return tabDisplayMode === 'intervals';
+    }
 
-        button.textContent = tabShowNoteNames ? 'Frets/ Notes: Notes' : 'Frets/ Notes: Frets';
+    function syncTabDisplayModeRadios() {
+        if (typeof document === 'undefined') return;
+        const fretsRadio = document.getElementById('tab-display-mode-frets');
+        const notesRadio = document.getElementById('tab-display-mode-notes');
+        const intervalsRadio = document.getElementById('tab-display-mode-intervals');
+
+        if (fretsRadio) fretsRadio.checked = tabDisplayMode === 'frets';
+        if (notesRadio) notesRadio.checked = tabDisplayMode === 'notes';
+        if (intervalsRadio) intervalsRadio.checked = tabDisplayMode === 'intervals';
+    }
+
+    function getCurrentTabDisplayMode() {
+        return tabDisplayMode;
     }
 
     function normalizeTuningNoteName(noteName) {
@@ -186,6 +212,59 @@
         return renderedNotes.join(' ');
     }
 
+    function getIntervalLabelFromSemitones(semitonesFromRoot) {
+        return Object.prototype.hasOwnProperty.call(INTERVAL_LABELS, semitonesFromRoot)
+            ? INTERVAL_LABELS[semitonesFromRoot]
+            : '';
+    }
+
+    function getRenderedIntervalTokenValue(tokenValue, stringIndex, tuningNote, keyRootPitchClass) {
+        if (!shouldRenderTabIntervals() || !tokenValue || keyRootPitchClass === null || keyRootPitchClass === undefined) {
+            return tokenValue;
+        }
+
+        const openStringNote = tuningNote || DEFAULT_TUNING[stringIndex] || DEFAULT_TUNING[DEFAULT_TUNING.length - 1];
+        const openStringIndex = getNoteIndex(openStringNote);
+        if (openStringIndex === null) {
+            return tokenValue;
+        }
+
+        if (!/\d/.test(tokenValue)) {
+            return '';
+        }
+
+        const renderedIntervals = [];
+        const fretMatches = tokenValue.matchAll(/\((\d+)\)|(\d+)/g);
+
+        for (const match of fretMatches) {
+            const parenthesizedFret = match[1];
+            const fretDigits = match[2];
+            const fretValue = parseInt(parenthesizedFret || fretDigits, 10);
+            if (Number.isNaN(fretValue)) {
+                continue;
+            }
+
+            const notePitchClass = (openStringIndex + fretValue) % 12;
+            const semitonesFromRoot = (notePitchClass - keyRootPitchClass + 12) % 12;
+            const intervalLabel = getIntervalLabelFromSemitones(semitonesFromRoot);
+            if (!intervalLabel) {
+                continue;
+            }
+
+            renderedIntervals.push(parenthesizedFret ? `(${intervalLabel})` : intervalLabel);
+        }
+
+        return renderedIntervals.join(' ');
+    }
+
+    function getRenderedDisplayTokenValue(tokenValue, stringIndex, tuningNote, keyRootPitchClass) {
+        if (shouldRenderTabIntervals() && keyRootPitchClass !== null && keyRootPitchClass !== undefined) {
+            return getRenderedIntervalTokenValue(tokenValue, stringIndex, tuningNote, keyRootPitchClass);
+        }
+
+        return getRenderedTokenValue(tokenValue, stringIndex, tuningNote);
+    }
+
     function rerenderAllTabulature() {
         for (const container of renderedTabContainers) {
             if (!container.isConnected) {
@@ -223,16 +302,39 @@
     function bindTabulatureControls() {
         if (tabulatureControlsBound || typeof document === 'undefined') return;
 
-        const noteModeButton = document.getElementById('toggle-tab-fret-notes');
+        const fretsRadio = document.getElementById('tab-display-mode-frets');
+        const notesRadio = document.getElementById('tab-display-mode-notes');
+        const intervalsRadio = document.getElementById('tab-display-mode-intervals');
         const checkbox = document.getElementById('toggle-tab-pentatonic-highlight');
 
-        if (noteModeButton) {
-            updateTabNoteModeButton();
-            noteModeButton.addEventListener('click', () => {
-                tabShowNoteNames = !tabShowNoteNames;
-                updateTabNoteModeButton();
+        syncTabDisplayModeRadios();
+
+        if (fretsRadio) {
+            fretsRadio.addEventListener('change', () => {
+                if (!fretsRadio.checked) return;
+                tabDisplayMode = 'frets';
                 document.dispatchEvent(new CustomEvent(TAB_NOTE_MODE_EVENT, {
-                    detail: { showNoteNames: tabShowNoteNames }
+                    detail: { mode: getCurrentTabDisplayMode() }
+                }));
+            });
+        }
+
+        if (notesRadio) {
+            notesRadio.addEventListener('change', () => {
+                if (!notesRadio.checked) return;
+                tabDisplayMode = 'notes';
+                document.dispatchEvent(new CustomEvent(TAB_NOTE_MODE_EVENT, {
+                    detail: { mode: getCurrentTabDisplayMode() }
+                }));
+            });
+        }
+
+        if (intervalsRadio) {
+            intervalsRadio.addEventListener('change', () => {
+                if (!intervalsRadio.checked) return;
+                tabDisplayMode = 'intervals';
+                document.dispatchEvent(new CustomEvent(TAB_NOTE_MODE_EVENT, {
+                    detail: { mode: getCurrentTabDisplayMode() }
                 }));
             });
         }
@@ -245,7 +347,7 @@
             });
         }
 
-        if (!noteModeButton && !checkbox) return;
+        if (!fretsRadio && !notesRadio && !intervalsRadio && !checkbox) return;
 
         tabulatureControlsBound = true;
     }
@@ -715,6 +817,7 @@
 
         // Parse key if provided (e.g., Dmaj or F#min)
         let key = null;
+        let keyRootPitchClass = null;
         if (typeof config.key === 'string' && config.key.trim()) {
             const normalizedKey = config.key.trim();
             const parsedKey = (typeof window !== 'undefined' && window.ScaleDatabase)
@@ -725,6 +828,9 @@
                 console.warn('Invalid key: expected values like Dmaj or F#min, got', normalizedKey);
             } else {
                 key = parsedKey.canonical;
+                keyRootPitchClass = (typeof window !== 'undefined' && window.ScaleDatabase)
+                    ? window.ScaleDatabase.getPitchClass(parsedKey.root)
+                    : null;
             }
         }
 
@@ -793,7 +899,8 @@
         return {
             sections: parsedSections,
             tuning: tuning,
-            key: key
+            key: key,
+            keyRootPitchClass: keyRootPitchClass
         };
     }
 
@@ -1621,7 +1728,7 @@
     /**
      * Render a single tablature string (guitar string line)
      */
-    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key) {
+    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key, keyRootPitchClass) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `tab-string tab-string-${stringIndex}`);
 
@@ -1938,7 +2045,7 @@
                 currentX += width;
                 continue; // Skip the normal increment at the end
             } else if (token.type === 'content') {
-                const renderedValue = getRenderedTokenValue(token.value, stringIndex, tuningLabel);
+                const renderedValue = getRenderedDisplayTokenValue(token.value, stringIndex, tuningLabel, keyRootPitchClass);
                 const hiddenTechniqueOnly = !renderedValue || renderedValue.trim() === '';
 
                 if (hiddenTechniqueOnly) {
@@ -2222,7 +2329,7 @@
                 const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
                 // Show tuning labels on all sections
                 const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
-                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key);
+                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key, tabData.keyRootPitchClass);
             }
 
             container.appendChild(svg);
