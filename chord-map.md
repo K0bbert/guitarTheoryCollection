@@ -21,3 +21,27 @@ iv and ii° are borrowed as standalone color/texture chords — they create a me
 | C      | **C7** | F      | G      | Add secondary dominant                       |
 | F      | G      | **B♭** | C      | Add modal interchange                        |
 | C      | **C7** | F      | **A♭** | Add secondary dominant and modal interchange |
+
+---
+
+## Aeolian Map (Natural Minor)
+
+This second map uses common minor-key techniques instead of a simple index rotation from major:
+
+- Aeolian diatonic center: i, ii°, bIII, iv, v, bVI, bVII.
+- Applied dominants: commonly used to tonicize bIII, iv, v, bVI, and bVII.
+- Minor modal interchange: common color borrowings include I (Picardy), IV, ii, and V.
+
+<div class="key-chord-map-aeolian"></div>
+
+---
+
+## Harmonic Minor Map
+
+This third map focuses on harmonic minor behavior (raised 7th) and common real-world color/replacement choices.
+
+- Harmonic minor center: i, ii°, bIII+, iv, V, bVI, vii°.
+- Applied dominants: shown for the most common tonicizations used around minor-key cadences.
+- Replacements/modal mixture: includes bVII (Aeolian), iv7 color, Picardy I, Neapolitan bII, and iiø color for predominant function.
+
+<div class="key-chord-map-harmonic-minor"></div>
