@@ -528,7 +528,7 @@
             '<div class="key-chord-map-wrap">',
             '<h3 class="key-chord-map-title">Harmony Map for ' + data.keyName + ' Harmonic Minor</h3>',
             '<div class="key-chord-map-row">',
-            '<div class="key-chord-map-row-label">Secondary Diminished to V + bII Neapolitan</div>',
+            '<div class="key-chord-map-row-label">Secondary Diminished to V + bII Neapolitan (mixable)</div>',
             '<div class="key-chord-map-grid">' + topHtml + '</div>',
             '</div>',
             '<div class="key-chord-map-connector">↑ Up: To any chord &nbsp;&nbsp;&bull;&nbsp;&nbsp; ↓ Down: Follow the resolution</div>',
@@ -538,7 +538,7 @@
             '</div>',
             '<div class="key-chord-map-connector">↓ Down: To any chord &nbsp;&nbsp;&bull;&nbsp;&nbsp; ↑ Up: Follow the resolution to return to harmonic-minor function</div>',
             '<div class="key-chord-map-row">',
-            '<div class="key-chord-map-row-label">Secondary Diminished to iv and bVI</div>',
+            '<div class="key-chord-map-row-label">Secondary Diminished to iv and bVI (mixable)</div>',
             '<div class="key-chord-map-grid">' + bottomHtml + '</div>',
             '</div>',
             '</div>'
