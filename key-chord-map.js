@@ -58,7 +58,7 @@
     const HARMONIC_MINOR_MIDDLE_ROW = [
         { degree: 0, roman: 'i',     quality: 'm',   seventhType: 'mMaj7', allowSecondary: false },
         { degree: 1, roman: 'ii°',   quality: 'dim', seventhType: 'm7b5',  allowSecondary: false },
-        { degree: 2, roman: 'bIII+', quality: 'aug', seventhType: 'Maj7#5',allowSecondary: true  },
+        { degree: 2, roman: 'bIII+', quality: 'aug', seventhType: 'Maj7',allowSecondary: true  },
         { degree: 3, roman: 'iv',    quality: 'm',   seventhType: 'm7',     allowSecondary: true  },
         { degree: 4, roman: 'V',     quality: 'M',   seventhType: '7',      allowSecondary: true  },
         { degree: 5, roman: 'bVI',   quality: 'M',   seventhType: 'Maj7',   allowSecondary: true  },
@@ -209,8 +209,6 @@
         const rootSemitone = selectorIndexToSemitone(rootSelectorIndex);
         const names = pickNoteNames(rootSemitone);
         const harmonicMinorScale = HARMONIC_MINOR_INTERVALS.map(interval => (rootSemitone + interval) % 12);
-        const aeolianScale = NATURAL_MINOR_INTERVALS.map(interval => (rootSemitone + interval) % 12);
-        const parallelMajor = MAJOR_SCALE_INTERVALS.map(interval => (rootSemitone + interval) % 12);
 
         const middle = HARMONIC_MINOR_MIDDLE_ROW.map(item => {
             const semitone = harmonicMinorScale[item.degree];
@@ -224,47 +222,66 @@
             };
         });
 
-        const secondary = middle.filter(item => item.allowSecondary).map(item => {
-            const dominantSemitone = (item.semitone + 7) % 12;
-            return {
-                chord: chordName(dominantSemitone, 'M', names),
-                resolvesTo: item.chord,
-                roman: 'V/' + item.roman,
-                seventhType: '7'
-            };
-        });
+        const vChord = middle.find(item => item.roman === 'V');
+        const harmonicTop = [];
+        if (vChord) {
+            const leadingToV = (vChord.semitone + 11) % 12;
+            const diminishedFamilyRoots = [0, 3, 6, 9].map(offset => (leadingToV + offset) % 12);
+            const diminishedFamilyLabels = [
+                'vii°7/V',
+                'vii°7/V alt. 1',
+                'vii°7/V alt. 2',
+                'vii°7/V alt. 3'
+            ];
 
-        const modal = HARMONIC_MINOR_MODAL_INTERCHANGE.map(item => {
-            let semitone;
+            diminishedFamilyRoots.forEach((root, index) => {
+                harmonicTop.push({
+                    chord: chordName(root, 'dim', names),
+                    resolvesTo: vChord.chord,
+                    roman: diminishedFamilyLabels[index],
+                    seventhType: 'dim7'
+                });
+            });
 
-            if (item.sourceRoman === 'bII') {
-                // Neapolitan color in minor (b2 scale degree above tonic)
-                semitone = (rootSemitone + 1) % 12;
-            } else if (item.sourceRoman === 'iiø') {
-                semitone = aeolianScale[1];
-            } else if (item.sourceType === 'parallel-major') {
-                semitone = parallelMajor[0];
-            } else if (item.sourceRoman === 'bVII') {
-                semitone = aeolianScale[6];
-            } else if (item.sourceRoman === 'iv7') {
-                semitone = aeolianScale[3];
-            } else {
-                semitone = rootSemitone;
-            }
+            const neapolitanSemitone = (rootSemitone + 1) % 12;
+            const neapolitanBass = noteName((neapolitanSemitone + 4) % 12, names);
+            harmonicTop.push({
+                chord: chordName(neapolitanSemitone, 'M', names) + '/' + neapolitanBass,
+                resolvesTo: vChord.chord,
+                roman: 'bII (Neapolitan)',
+                seventhType: 'Maj7'
+            });
+        }
 
-            return {
-                chord: chordName(semitone, item.quality, names),
-                sourceRoman: item.sourceRoman,
-                seventhType: item.seventhType,
-                targets: item.targets
-            };
-        });
+        const harmonicBottom = [];
+        const ivChord = middle.find(item => item.roman === 'iv');
+        const bVIChord = middle.find(item => item.roman === 'bVI');
+        if (ivChord) {
+            const leadingToIv = (ivChord.semitone + 11) % 12;
+            const diminishedFamilyRoots = [0, 3, 6, 9].map(offset => (leadingToIv + offset) % 12);
+
+            diminishedFamilyRoots.forEach((root, index) => {
+                let resolvesTo = null;
+                if (index === 0 || index === 1) {
+                    resolvesTo = ivChord.chord;
+                } else if (index === 2) {
+                    resolvesTo = bVIChord ? bVIChord.chord : ivChord.chord;
+                }
+
+                harmonicBottom.push({
+                    chord: chordName(root, 'dim', names),
+                    resolvesTo: resolvesTo,
+                    roman: 'vii°7/iv,bVI',
+                    seventhType: 'dim7'
+                });
+            });
+        }
 
         return {
             keyName: noteName(rootSemitone, names),
             middle: middle,
-            secondary: secondary,
-            modal: modal
+            harmonicTop: harmonicTop,
+            harmonicBottom: harmonicBottom
         };
     }
 
@@ -475,7 +492,7 @@
         const rootIndex = getRootIndex();
         const data = buildHarmonicMinorKeyData(rootIndex);
 
-        const secondaryHtml = data.secondary.map(item => {
+        const topHtml = data.harmonicTop.map(item => {
             return [
                 '<div class="key-chord-map-card">',
                 '<div class="key-chord-map-card-main">' + item.chord + '</div>',
@@ -494,12 +511,15 @@
             ].join('');
         }).join('');
 
-        const modalHtml = data.modal.map(item => {
+        const bottomHtml = data.harmonicBottom.map(item => {
+            const arrowHtml = item.resolvesTo
+                ? '<div class="key-chord-map-card-arrow">resolves to → ' + item.resolvesTo + '</div>'
+                : '';
             return [
                 '<div class="key-chord-map-card">',
                 '<div class="key-chord-map-card-main">' + item.chord + '</div>',
-                '<div class="key-chord-map-card-sub">' + item.sourceRoman + ' <span class="key-chord-map-seventh">(' + item.seventhType + ')</span></div>',
-                '<div class="key-chord-map-card-arrow">replace / color → ' + item.targets + '</div>',
+                '<div class="key-chord-map-card-sub">' + item.roman + ' <span class="key-chord-map-seventh">(' + item.seventhType + ')</span></div>',
+                arrowHtml,
                 '</div>'
             ].join('');
         }).join('');
@@ -508,18 +528,18 @@
             '<div class="key-chord-map-wrap">',
             '<h3 class="key-chord-map-title">Harmony Map for ' + data.keyName + ' Harmonic Minor</h3>',
             '<div class="key-chord-map-row">',
-            '<div class="key-chord-map-row-label">Applied Dominants (common in minor cadence language)</div>',
-            '<div class="key-chord-map-grid">' + secondaryHtml + '</div>',
+            '<div class="key-chord-map-row-label">Secondary Diminished to V + bII Neapolitan</div>',
+            '<div class="key-chord-map-grid">' + topHtml + '</div>',
             '</div>',
             '<div class="key-chord-map-connector">↑ Up: To any chord &nbsp;&nbsp;&bull;&nbsp;&nbsp; ↓ Down: Follow the resolution</div>',
             '<div class="key-chord-map-row">',
             '<div class="key-chord-map-row-label">Main Chords in Harmonic Minor (mixable)</div>',
             '<div class="key-chord-map-grid">' + middleHtml + '</div>',
             '</div>',
-            '<div class="key-chord-map-connector">↓ Down: Borrow color/replacements &nbsp;&nbsp;&bull;&nbsp;&nbsp; ↑ Up: Return to harmonic-minor function</div>',
+            '<div class="key-chord-map-connector">↓ Down: To any chord &nbsp;&nbsp;&bull;&nbsp;&nbsp; ↑ Up: Follow the resolution to return to harmonic-minor function</div>',
             '<div class="key-chord-map-row">',
-            '<div class="key-chord-map-row-label">Common Replacements & Modal Mixture for Harmonic Minor</div>',
-            '<div class="key-chord-map-grid">' + modalHtml + '</div>',
+            '<div class="key-chord-map-row-label">Secondary Diminished to iv and bVI</div>',
+            '<div class="key-chord-map-grid">' + bottomHtml + '</div>',
             '</div>',
             '</div>'
         ].join('');

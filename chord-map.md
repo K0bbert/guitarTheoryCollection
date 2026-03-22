@@ -13,14 +13,14 @@ iv and ii° are borrowed as standalone color/texture chords — they create a me
 
 ---
 
-**Example in C:**
+**Example in C Maj:**
 
-| Chords |        |        |        | Description                                  |
-|--------|--------|--------|--------|----------------------------------------------|
-| Am     | F      | G      | C      | Main chords                                  |
-| C      | **C7** | F      | G      | Add secondary dominant                       |
-| F      | G      | **B♭** | C      | Add modal interchange                        |
-| C      | **C7** | F      | **A♭** | Add secondary dominant and modal interchange |
+| Chords |          |        |        | Description                                  |
+|--------|----------|--------|--------|----------------------------------------------|
+| Am     | F        | G      | C      | Main chords                                  |
+| C      | ***C7*** | F      | G      | Add secondary dominant                       |
+| F      | G        | **B♭** | C      | Add modal interchange                        |
+| C      | ***C7*** | F      | **A♭** | Add secondary dominant and modal interchange |
 
 ---
 
@@ -41,7 +41,19 @@ This second map uses common minor-key techniques instead of a simple index rotat
 This third map focuses on harmonic minor behavior (raised 7th) and common real-world color/replacement choices.
 
 - Harmonic minor center: i, ii°, bIII+, iv, V, bVI, vii°.
-- Applied dominants: shown for the most common tonicizations used around minor-key cadences.
-- Replacements/modal mixture: includes bVII (Aeolian), iv7 color, Picardy I, Neapolitan bII, and iiø color for predominant function.
 
 <div class="key-chord-map-harmonic-minor"></div>
+
+---
+
+**Example in A Min:**
+
+| Chords |            |            |         | Description                                   |
+|--------|------------|------------|---------|-----------------------------------------------|
+| Am     | G#°        | F          | E7      | Main chords                                   |
+| Dm     | E7         | Am         | **C#°** | Add secondary diminsihed                      |
+| Am     | F          | ***B♭/D*** | E7      | Add Neapolitan chord                          |
+| Am     | ***B♭/D*** | **D#dim**  | E7      | Add Neapolitan chord and secondary diminished |
+
+---
+
