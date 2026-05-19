@@ -252,18 +252,91 @@
         return duration;
     }
 
+    function buildTiePlaybackMap(rhythmSequence, tieData) {
+        const tieMap = {
+            suppressAttackByNoteIndex: new Set(),
+            sustainExtraBeatsByNoteIndex: {}
+        };
+
+        if (!Array.isArray(rhythmSequence) || rhythmSequence.length === 0) {
+            return tieMap;
+        }
+
+        const noteEventDurations = [];
+        rhythmSequence.forEach(item => {
+            if (!item.isPause) {
+                noteEventDurations.push(item.duration || 0);
+            }
+        });
+
+        if (!Array.isArray(tieData) || tieData.length === 0 || noteEventDurations.length === 0) {
+            return tieMap;
+        }
+
+        const effectiveSourceByNoteIndex = noteEventDurations.map((_, idx) => idx);
+
+        tieData.forEach(tie => {
+            if (!tie || typeof tie.fromNoteIndex !== 'number' || typeof tie.toNoteIndex !== 'number') {
+                return;
+            }
+
+            const fromIdx = tie.fromNoteIndex;
+            const toIdx = tie.toNoteIndex;
+            if (fromIdx < 0 || toIdx < 0 || fromIdx >= noteEventDurations.length || toIdx >= noteEventDurations.length) {
+                return;
+            }
+            if (toIdx <= fromIdx) {
+                return;
+            }
+
+            const sourceIdx = effectiveSourceByNoteIndex[fromIdx];
+            const targetDuration = noteEventDurations[toIdx] || 0;
+
+            if (targetDuration > 0) {
+                if (!Object.prototype.hasOwnProperty.call(tieMap.sustainExtraBeatsByNoteIndex, sourceIdx)) {
+                    tieMap.sustainExtraBeatsByNoteIndex[sourceIdx] = 0;
+                }
+                tieMap.sustainExtraBeatsByNoteIndex[sourceIdx] += targetDuration;
+            }
+
+            tieMap.suppressAttackByNoteIndex.add(toIdx);
+            effectiveSourceByNoteIndex[toIdx] = sourceIdx;
+        });
+
+        return tieMap;
+    }
+
     /**
      * Parse rhythm sequence from a tablature's rhythm data
      * Expected format: array of {symbol, isPause} objects
      */
-    function parseRhythmSequence(rhythmData) {
+    function parseRhythmSequence(rhythmData, tieData) {
         if (!rhythmData || !Array.isArray(rhythmData)) return [];
 
-        return rhythmData.map(item => ({
+        const baseSequence = rhythmData.map(item => ({
             symbol: item.symbol,
             duration: getRhythmDuration(item.symbol),
             isPause: item.isPause || false
         }));
+
+        const tieMap = buildTiePlaybackMap(baseSequence, tieData);
+        let noteEventIndex = 0;
+
+        return baseSequence.map(item => {
+            if (item.isPause) {
+                return item;
+            }
+
+            const currentNoteIndex = noteEventIndex;
+            noteEventIndex++;
+
+            return {
+                ...item,
+                noteEventIndex: currentNoteIndex,
+                suppressAttack: tieMap.suppressAttackByNoteIndex.has(currentNoteIndex),
+                tieSustainExtraBeats: tieMap.sustainExtraBeatsByNoteIndex[currentNoteIndex] || 0
+            };
+        });
     }
 
     /**
@@ -405,9 +478,11 @@
                     }
                 }
 
-                // Play note beep (unless it's a rest/pause)
-                if (!item.isPause) {
-                    scheduleNoteBeep(noteTime);
+                // Play note beep (unless it's a rest/pause or a tied target note)
+                if (!item.isPause && !item.suppressAttack) {
+                    const sustainBeats = item.duration + (item.tieSustainExtraBeats || 0);
+                    const sustainSeconds = sustainBeats * secondsPerBeat;
+                    scheduleNoteBeep(noteTime, sustainSeconds);
                 }
 
                 currentBeat += item.duration;
@@ -494,7 +569,7 @@
         /**
          * Schedule a note beep
          */
-        function scheduleNoteBeep(time) {
+        function scheduleNoteBeep(time, sustainSeconds) {
             if (!ctx || !isRunning) return;
 
             const oscillator = ctx.createOscillator();
@@ -506,12 +581,17 @@
             oscillator.frequency.value = currentNoteFrequency;
             oscillator.type = 'sine';
 
+            const safeSustain = Math.max(DURATIONS.noteBeep, sustainSeconds || DURATIONS.noteBeep);
+            const releaseSeconds = Math.min(0.03, safeSustain * 0.2);
+            const holdEnd = Math.max(time + 0.01, time + safeSustain - releaseSeconds);
+
             gainNode.gain.setValueAtTime(0, time);
             gainNode.gain.linearRampToValueAtTime(0.5, time + 0.01);
-            gainNode.gain.linearRampToValueAtTime(0, time + DURATIONS.noteBeep);
+            gainNode.gain.setValueAtTime(0.5, holdEnd);
+            gainNode.gain.linearRampToValueAtTime(0, time + safeSustain);
 
             oscillator.start(time);
-            oscillator.stop(time + DURATIONS.noteBeep);
+            oscillator.stop(time + safeSustain);
             scheduledNodes.push(oscillator);
         }
 
@@ -574,7 +654,7 @@
      * @param {Element} container - Container to attach controls to
      * @param {Array} rhythmData - Rhythm data from tablature
      */
-    function createPlaybackControls(container, rhythmData) {
+    function createPlaybackControls(container, rhythmData, tieData) {
         const controlsDiv = document.createElement('div');
         controlsDiv.className = 'rhythm-playback-controls';
         controlsDiv.style.cssText = `
@@ -589,24 +669,26 @@
             font-size: 14px;
         `;
 
-        // Create progress bar overlay for the tablature
-        const tabSvg = container.querySelector('svg');
-        if (tabSvg) {
-            console.log('Creating progress bar for tablature, SVG found:', tabSvg);
+        // Create one progress bar overlay per rendered tablature SVG section.
+        const tabSvgs = Array.from(container.querySelectorAll('svg'));
+        const progressBars = [];
 
-            // Make the SVG parent position relative for absolute positioning
-            const svgParent = tabSvg.parentElement;
-            if (svgParent) {
-                svgParent.style.position = 'relative';
-                console.log('SVG parent set to relative positioning');
-            }
+        container.style.position = 'relative';
+
+        tabSvgs.forEach((svg, sectionIndex) => {
+            const svgParent = svg.parentElement;
+            if (!svgParent) return;
+
+            svgParent.style.position = 'relative';
 
             const progressBar = document.createElement('div');
             progressBar.className = 'playback-progress-bar';
-            const svgHeight = tabSvg.getAttribute('height') || tabSvg.getBoundingClientRect().height || 200;
+            progressBar.setAttribute('data-section-index', String(sectionIndex));
+
+            const svgHeight = svg.getAttribute('height') || svg.getBoundingClientRect().height || 200;
             progressBar.style.cssText = `
                 position: absolute;
-                top: 0;
+                top: ${svg.offsetTop}px;
                 left: 0;
                 width: 4px;
                 height: ${svgHeight}px;
@@ -619,10 +701,36 @@
                 transform: translateX(0px);
                 will-change: transform;
             `;
-            tabSvg.parentElement.insertBefore(progressBar, tabSvg);
-            console.log('Progress bar created and inserted, height:', svgHeight);
-        } else {
-            console.log('No SVG found in container for progress bar');
+
+            svgParent.insertBefore(progressBar, svg);
+            progressBars.push(progressBar);
+        });
+
+        function refreshProgressBarLayout() {
+            tabSvgs.forEach((svg, idx) => {
+                const bar = progressBars[idx];
+                if (!bar) return;
+                const svgHeight = svg.getAttribute('height') || svg.getBoundingClientRect().height || 200;
+                bar.style.top = `${svg.offsetTop}px`;
+                bar.style.height = `${svgHeight}px`;
+            });
+        }
+
+        function hideAllProgressBars() {
+            progressBars.forEach(bar => {
+                bar.style.display = 'none';
+            });
+        }
+
+        function showProgressBarAt(sectionIndex, xPosition) {
+            progressBars.forEach((bar, idx) => {
+                if (idx === sectionIndex) {
+                    bar.style.display = 'block';
+                    bar.style.transform = `translateX(${xPosition}px)`;
+                } else {
+                    bar.style.display = 'none';
+                }
+            });
         }
 
         // Play Button
@@ -722,6 +830,7 @@
         countInCheckbox.addEventListener('change', updateOnceVisibility);
 
         let currentPlayback = null;
+        let progressBarAnimationFrame = null;
 
         // Play button handler
         playButton.addEventListener('click', () => {
@@ -734,7 +843,7 @@
             const countInOnce = onceCheckbox.checked;
 
             // Parse rhythm sequence
-            const rhythmSequence = parseRhythmSequence(rhythmData);
+            const rhythmSequence = parseRhythmSequence(rhythmData, tieData);
             const timeSignature = container._timeSignature || globalTimeSignature || DEFAULT_TIME_SIGNATURE;
             const beatsPerBar = getBeatsPerBar(timeSignature);
 
@@ -781,44 +890,54 @@
                     playButton.style.display = 'flex';
                     stopButton.style.display = 'none';
                     statusSpan.textContent = '';
+                    if (progressBarAnimationFrame) {
+                        cancelAnimationFrame(progressBarAnimationFrame);
+                        progressBarAnimationFrame = null;
+                    }
+                    hideAllProgressBars();
                     currentPlayback = null;
                 },
                 null,
                 timeSignature
             );
 
-            // Get progress bar and tablature SVG for visual feedback
-            const progressBar = container.querySelector('.playback-progress-bar');
-            const tabSvg = container.querySelector('svg');
-            let progressBarAnimationFrame = null;
-
             // Show progress bar AFTER playback is started
-            if (progressBar && tabSvg && currentPlayback) {
-                progressBar.style.display = 'block';
+            if (progressBars.length > 0 && tabSvgs.length > 0 && currentPlayback) {
+                refreshProgressBarLayout();
 
                 // Build position map from explicit per-note playback anchors.
                 const positionMap = [];
                 let cumulativeBeats = 0;
                 let playbackAnchorIndex = 0;
 
-                const playbackAnchors = Array.from(tabSvg.querySelectorAll('.playback-anchor'));
-                let playbackPositions = playbackAnchors
-                    .map(elem => parseFloat(elem.getAttribute('data-x')))
-                    .filter(x => !isNaN(x));
+                const playbackAnchors = tabSvgs.flatMap((svg, sectionIndex) => {
+                    return Array.from(svg.querySelectorAll('.playback-anchor'))
+                        .map(elem => ({
+                            xPosition: parseFloat(elem.getAttribute('data-x')),
+                            sectionIndex: sectionIndex
+                        }))
+                        .filter(item => !isNaN(item.xPosition));
+                });
+                let playbackPositions = playbackAnchors;
 
                 const nonPauseCount = rhythmSequence.filter(note => !note.isPause).length;
 
                 // Fallback for robustness: if anchors are missing/mismatched, derive positions
                 // from rendered rhythm stems/rests or note-content centers.
                 if (playbackPositions.length !== nonPauseCount) {
-                    const rhythmPositions = Array.from(tabSvg.querySelectorAll('.rhythm-stem, .rhythm-rest'))
-                        .map(elem => parseFloat(elem.getAttribute('data-x')))
-                        .filter(x => !isNaN(x))
-                        .map(x => x + 10); // convert stored left-x to visual center
+                    const rhythmPositions = tabSvgs.flatMap((svg, sectionIndex) => {
+                        return Array.from(svg.querySelectorAll('.rhythm-stem, .rhythm-rest'))
+                            .map(elem => parseFloat(elem.getAttribute('data-x')))
+                            .filter(x => !isNaN(x))
+                            .map(x => ({ xPosition: x + 10, sectionIndex })); // convert stored left-x to visual center
+                    });
 
-                    const contentPositions = Array.from(tabSvg.querySelectorAll('.tab-content[data-playback-note="1"]'))
-                        .map(elem => parseFloat(elem.getAttribute('x')))
-                        .filter(x => !isNaN(x));
+                    const contentPositions = tabSvgs.flatMap((svg, sectionIndex) => {
+                        return Array.from(svg.querySelectorAll('.tab-content[data-playback-note="1"]'))
+                            .map(elem => parseFloat(elem.getAttribute('x')))
+                            .filter(x => !isNaN(x))
+                            .map(x => ({ xPosition: x, sectionIndex }));
+                    });
 
                     if (rhythmPositions.length === nonPauseCount) {
                         playbackPositions = rhythmPositions;
@@ -833,11 +952,13 @@
 
                 rhythmSequence.forEach((note, index) => {
                     let xPosition = null;
+                    let sectionIndex = null;
 
                     // Only map position for non-pause notes.
                     if (!note.isPause && playbackPositions.length > 0) {
                         if (typeof playbackPositions[playbackAnchorIndex] !== 'undefined') {
-                            xPosition = playbackPositions[playbackAnchorIndex];
+                            xPosition = playbackPositions[playbackAnchorIndex].xPosition;
+                            sectionIndex = playbackPositions[playbackAnchorIndex].sectionIndex;
                             playbackAnchorIndex++;
                         }
                     }
@@ -846,6 +967,7 @@
                     positionMap.push({
                         beatTime: cumulativeBeats,
                         xPosition: xPosition,
+                        sectionIndex: sectionIndex,
                         duration: note.duration,
                         symbol: note.symbol,
                         isPause: note.isPause
@@ -876,16 +998,26 @@
 
                         // Interpolate position
                         if (prevPos && nextPos) {
-                            const beatRange = nextPos.beatTime - prevPos.beatTime;
-                            const beatOffset = positionMap[i].beatTime - prevPos.beatTime;
-                            const progress = beatOffset / beatRange;
-                            positionMap[i].xPosition = prevPos.xPosition + (nextPos.xPosition - prevPos.xPosition) * progress;
+                            if (prevPos.sectionIndex === nextPos.sectionIndex) {
+                                const beatRange = nextPos.beatTime - prevPos.beatTime;
+                                const beatOffset = positionMap[i].beatTime - prevPos.beatTime;
+                                const progress = beatOffset / beatRange;
+                                positionMap[i].xPosition = prevPos.xPosition + (nextPos.xPosition - prevPos.xPosition) * progress;
+                                positionMap[i].sectionIndex = prevPos.sectionIndex;
+                            } else {
+                                // Crossing sections: hold the previous section and jump on the next note.
+                                positionMap[i].xPosition = prevPos.xPosition;
+                                positionMap[i].sectionIndex = prevPos.sectionIndex;
+                            }
                         } else if (prevPos) {
                             positionMap[i].xPosition = prevPos.xPosition;
+                            positionMap[i].sectionIndex = prevPos.sectionIndex;
                         } else if (nextPos) {
                             positionMap[i].xPosition = nextPos.xPosition;
+                            positionMap[i].sectionIndex = nextPos.sectionIndex;
                         } else {
                             positionMap[i].xPosition = 70; // Fallback
+                            positionMap[i].sectionIndex = 0;
                         }
                     }
                 }
@@ -893,11 +1025,14 @@
                 // Precompute the visual hold position for each event.
                 // During pauses we keep the bar on the latest previous note position.
                 let lastNoteX = 0;
+                let lastSectionIndex = 0;
                 for (let i = 0; i < positionMap.length; i++) {
                     if (!positionMap[i].isPause) {
                         lastNoteX = positionMap[i].xPosition;
+                        lastSectionIndex = positionMap[i].sectionIndex;
                     }
                     positionMap[i].displayX = positionMap[i].isPause ? lastNoteX : positionMap[i].xPosition;
+                    positionMap[i].displaySectionIndex = positionMap[i].isPause ? lastSectionIndex : positionMap[i].sectionIndex;
                 }
 
                 const totalBeats = getTotalBeats(rhythmSequence);
@@ -907,7 +1042,7 @@
                 // Animation loop to update progress bar position
                 const updateProgressBar = () => {
                     if (!currentPlayback) {
-                        progressBar.style.display = 'none';
+                        hideAllProgressBars();
                         return;
                     }
 
@@ -918,7 +1053,7 @@
 
                         // Don't show progress until playback actually starts (during initial count-in)
                         if (elapsed < 0) {
-                            progressBar.style.display = 'none';
+                            hideAllProgressBars();
                             progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                             return;
                         }
@@ -937,7 +1072,7 @@
                         // For non-looping playback, hide the bar once we've exceeded the duration
                         // This prevents the bar from jumping back to the first note due to modulo wrap-around
                         if (!loop && elapsed >= rhythmDuration) {
-                            progressBar.style.display = 'none';
+                            hideAllProgressBars();
                             progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                             return;
                         }
@@ -955,13 +1090,10 @@
 
                             if (positionInLoop < countInDuration) {
                                 // We're in a count-in period - hide the progress bar
-                                progressBar.style.display = 'none';
+                                hideAllProgressBars();
                                 progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
                                 return;
                             }
-
-                            // We're in a rhythm section - show the progress bar
-                            progressBar.style.display = 'block';
 
                             // Calculate beat position, excluding count-in beats from the total
                             // We've had (numCompleteCycles + 1) count-ins since the first rhythm ended
@@ -972,7 +1104,6 @@
                         } else {
                             // First iteration, no looping, or countInOnce mode (no count-ins between loops)
                             // In countInOnce mode: [Rhythm1][Rhythm2][Rhythm3]... (simple loop without count-ins)
-                            progressBar.style.display = 'block';
                             normalizedBeat = currentBeat % totalBeats;
                         }
 
@@ -990,9 +1121,10 @@
                         }
 
                         const xPosition = positionMap[positionCursor].displayX;
+                        const sectionIndex = positionMap[positionCursor].displaySectionIndex || 0;
                         lastNormalizedBeat = normalizedBeat;
 
-                        progressBar.style.transform = `translateX(${xPosition}px)`;
+                        showProgressBarAt(sectionIndex, xPosition);
                     }
 
                     progressBarAnimationFrame = requestAnimationFrame(updateProgressBar);
@@ -1010,10 +1142,7 @@
                 cancelAnimationFrame(progressBarAnimationFrame);
                 progressBarAnimationFrame = null;
             }
-            const progressBar = container.querySelector('.playback-progress-bar');
-            if (progressBar) {
-                progressBar.style.display = 'none';
-            }
+            hideAllProgressBars();
             playButton.style.display = 'flex';
             stopButton.style.display = 'none';
             statusSpan.textContent = '';
@@ -1044,12 +1173,13 @@
                 try {
                     const parsed = JSON.parse(rhythmDataStr);
                     const rhythmData = Array.isArray(parsed) ? parsed : (parsed.rhythms || []);
+                    const tieData = Array.isArray(parsed) ? [] : (parsed.ties || []);
                     const parsedTimeSignature = Array.isArray(parsed)
                         ? DEFAULT_TIME_SIGNATURE
                         : (parsed.timeSignature || DEFAULT_TIME_SIGNATURE);
 
                     tabContainer._timeSignature = parsedTimeSignature;
-                    createPlaybackControls(tabContainer, rhythmData);
+                    createPlaybackControls(tabContainer, rhythmData, tieData);
                 } catch (e) {
                     console.error('Failed to parse rhythm data:', e);
                 }

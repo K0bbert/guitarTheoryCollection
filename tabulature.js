@@ -388,50 +388,55 @@
     }
 
     /**
-     * Parse rhythm line to extract rhythm symbols and their positions
-     * Rhythm line format: "|-h---w-h.-w.-q--------q.-e--e.-t-t-t--------|"
-     * Also supports pauses: hp (half pause), qp (quarter pause), etc.
-     * Returns array of {symbol, position, isPause} objects
+     * Parse rhythm notation into rhythm events and tie markers.
+     * Tie markers are written using '>' between note symbols.
      */
-    function parseRhythmLine(rhythmLine) {
-        if (!rhythmLine) return [];
+    function parseRhythmNotation(rhythmLine) {
+        if (!rhythmLine) {
+            return { rhythms: [], ties: [] };
+        }
 
         const rhythms = [];
+        const tieMarkerPositions = [];
         let i = 0;
         let barCount = 0;
 
         while (i < rhythmLine.length) {
             const char = rhythmLine[i];
 
-            // Track bar positions
             if (char === '|') {
                 barCount++;
                 i++;
                 continue;
             }
 
-            // Skip dashes and spaces
+            if (char === '>') {
+                tieMarkerPositions.push(i);
+                i++;
+                continue;
+            }
+
             if (char === '-' || char === ' ') {
                 i++;
                 continue;
             }
 
-            // Found a rhythm symbol
+            if (!/[whqesft]/.test(char)) {
+                i++;
+                continue;
+            }
+
             let symbol = char;
             let j = i + 1;
 
-            // Check for triplet indicator (e.g., "et", "st", "ft", "qt", "ht", "wt")
             if (j < rhythmLine.length && rhythmLine[j] === 't') {
                 symbol += 't';
                 j++;
-            }
-            // Check for pause indicator (e.g., "hp", "qp", "wp", "ep", "sp", "fp", "tp")
-            else if (j < rhythmLine.length && rhythmLine[j] === 'p') {
+            } else if (j < rhythmLine.length && rhythmLine[j] === 'p') {
                 symbol += 'p';
                 j++;
             }
 
-            // Check for dotted note/pause (e.g., "h.", "hp.", "q.", "f.", "et.")
             if (j < rhythmLine.length && rhythmLine[j] === '.') {
                 symbol += '.';
                 j++;
@@ -443,13 +448,48 @@
                 symbol: symbol,
                 position: i,
                 isPause: isPause,
-                barIndex: barCount  // Track which bar this rhythm belongs to
+                barIndex: barCount
             });
 
             i = j;
         }
 
-        return rhythms;
+        const noteEvents = rhythms.filter(rhythm => !rhythm.isPause);
+        const ties = [];
+        const tieKeys = new Set();
+
+        tieMarkerPositions.forEach(markerPos => {
+            let fromNoteIndex = -1;
+            let toNoteIndex = -1;
+
+            for (let idx = noteEvents.length - 1; idx >= 0; idx--) {
+                if (noteEvents[idx].position < markerPos) {
+                    fromNoteIndex = idx;
+                    break;
+                }
+            }
+
+            for (let idx = 0; idx < noteEvents.length; idx++) {
+                if (noteEvents[idx].position > markerPos) {
+                    toNoteIndex = idx;
+                    break;
+                }
+            }
+
+            if (fromNoteIndex >= 0 && toNoteIndex > fromNoteIndex) {
+                const key = `${fromNoteIndex}:${toNoteIndex}`;
+                if (!tieKeys.has(key)) {
+                    tieKeys.add(key);
+                    ties.push({ fromNoteIndex, toNoteIndex });
+                }
+            }
+        });
+
+        return { rhythms, ties };
+    }
+
+    function parseRhythmLine(rhythmLine) {
+        return parseRhythmNotation(rhythmLine).rhythms;
     }
 
     /**
@@ -674,11 +714,12 @@
      */
     function normalizeTableture(lines, rhythmLine) {
         const groups = identifyVerticalGroups(lines);
+        let rhythmNotation = null;
 
         // Parse and assign rhythms if provided
         if (rhythmLine) {
-            const rhythms = parseRhythmLine(rhythmLine);
-            assignRhythmsToGroups(groups, rhythms);
+            rhythmNotation = parseRhythmNotation(rhythmLine);
+            assignRhythmsToGroups(groups, rhythmNotation.rhythms);
         }
 
         // Build token arrays where each group creates one token per string
@@ -808,7 +849,10 @@
             }
         }
 
-        return tokenLines;
+        return {
+            tokenLines: tokenLines,
+            rhythmTies: rhythmNotation ? rhythmNotation.ties : []
+        };
     }
 
     /**
@@ -908,22 +952,27 @@
             }
 
             // Normalize while preserving vertical alignment and get tokens
-            const tokenLines = normalizeTableture(stringLines, rhythmLine);
+            const normalizedSection = normalizeTableture(stringLines, rhythmLine);
+            const tokenLines = normalizedSection.tokenLines;
 
             // Find the maximum number of tokens
             const maxTokens = Math.max(...tokenLines.map(tokens => tokens.length));
 
             // Parse rhythm data for playback
             let rhythmData = null;
+            let rhythmTies = [];
             if (rhythmLine) {
-                rhythmData = parseRhythmLine(rhythmLine);
+                const rhythmNotation = parseRhythmNotation(rhythmLine);
+                rhythmData = rhythmNotation.rhythms;
+                rhythmTies = rhythmNotation.ties;
             }
 
             parsedSections.push({
                 tokenLines: tokenLines,
                 maxTokens: maxTokens,
                 numStrings: tokenLines.length,
-                rhythmData: rhythmData
+                rhythmData: rhythmData,
+                rhythmTies: rhythmTies
             });
         }
 
@@ -1764,15 +1813,40 @@
         return false;
     }
 
+    function renderRhythmTieArc(parent, startX, endX) {
+        if (typeof startX !== 'number' || typeof endX !== 'number' || endX <= startX) {
+            return null;
+        }
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const baseY = TAB_CONFIG.paddingTop - TAB_CONFIG.stemHeight - 6;
+        const span = endX - startX;
+        const curvature = Math.min(22, Math.max(10, span * 0.18));
+        const controlX = (startX + endX) / 2;
+        const controlY = baseY - curvature;
+        const d = `M ${startX} ${baseY} Q ${controlX} ${controlY} ${endX} ${baseY}`;
+
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', TAB_CONFIG.stemColor);
+        path.setAttribute('stroke-width', 1.25);
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('class', 'rhythm-tie');
+        parent.appendChild(path);
+
+        return path;
+    }
+
     /**
      * Render a single tablature string (guitar string line)
      */
-    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key, keyRootPitchClass, timeSignature) {
+    function renderString(svg, stringIndex, tokens, yPosition, maxTokens, tuningLabel, key, keyRootPitchClass, timeSignature, rhythmTies) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', `tab-string tab-string-${stringIndex}`);
         const beatsPerBar = (timeSignature && typeof timeSignature.numerator === 'number')
             ? timeSignature.numerator
             : DEFAULT_TIME_SIGNATURE.numerator;
+        const renderedRhythmNoteAnchors = [];
 
         // Render tuning label if provided
         if (tuningLabel) {
@@ -1985,6 +2059,7 @@
                 if (stringIndex === 0 && token.rhythm) {
                     if (!token.rhythm.includes('p')) {
                         renderPlaybackAnchor(svg, x);
+                        renderedRhythmNoteAnchors.push(x + TAB_CONFIG.characterWidth / 2);
                     }
 
                     const baseRhythm = getBaseRhythm(token.rhythm);
@@ -2184,6 +2259,7 @@
                 if (stringIndex === 0 && token.rhythm) {
                     if (!token.rhythm.includes('p')) {
                         renderPlaybackAnchor(svg, rhythmRenderX);
+                        renderedRhythmNoteAnchors.push(rhythmCenterX);
                     }
 
                     const baseRhythm = getBaseRhythm(token.rhythm);
@@ -2313,6 +2389,18 @@
             } else if (currentBarElements.length > 0) {
                 console.log('VALID FINAL BAR: Duration is', currentBarDuration);
             }
+
+            if (Array.isArray(rhythmTies) && rhythmTies.length > 0) {
+                rhythmTies.forEach(tie => {
+                    if (!tie || typeof tie.fromNoteIndex !== 'number' || typeof tie.toNoteIndex !== 'number') {
+                        return;
+                    }
+
+                    const startX = renderedRhythmNoteAnchors[tie.fromNoteIndex];
+                    const endX = renderedRhythmNoteAnchors[tie.toNoteIndex];
+                    renderRhythmTieArc(group, startX, endX);
+                });
+            }
         }
 
         // Keep text and interruption masks above all line segments.
@@ -2371,7 +2459,7 @@
                 const yPosition = TAB_CONFIG.paddingTop + (i * TAB_CONFIG.lineHeight);
                 // Show tuning labels on all sections
                 const tuningLabel = tabData.tuning ? tabData.tuning[i] : null;
-                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key, tabData.keyRootPitchClass, tabData.timeSignature);
+                renderString(svg, i, section.tokenLines[i], yPosition, section.maxTokens, tuningLabel, tabData.key, tabData.keyRootPitchClass, tabData.timeSignature, section.rhythmTies);
             }
 
             container.appendChild(svg);
@@ -2417,11 +2505,46 @@
             container.className = 'tabulature-embed tablature-container';
             container.style.margin = '20px 0';
 
-            // Collect all rhythm data from sections
+            // Collect all rhythm data/ties from sections
             const allRhythms = [];
+            const allTies = [];
+            let noteOffset = 0;
+            let barOffset = 0;
             tabData.sections.forEach(section => {
                 if (section.rhythmData && section.rhythmData.length > 0) {
-                    allRhythms.push(...section.rhythmData);
+                    const sectionBarIndices = section.rhythmData
+                        .map(rhythm => (typeof rhythm.barIndex === 'number' ? rhythm.barIndex : 0));
+                    const sectionMinBarIndex = Math.min(...sectionBarIndices);
+                    const sectionMaxBarIndex = Math.max(...sectionBarIndices);
+                    const sectionBarCount = (sectionMaxBarIndex - sectionMinBarIndex) + 1;
+
+                    section.rhythmData.forEach(rhythm => {
+                        const originalBarIndex = (typeof rhythm.barIndex === 'number') ? rhythm.barIndex : 0;
+                        allRhythms.push({
+                            ...rhythm,
+                            barIndex: (originalBarIndex - sectionMinBarIndex) + barOffset
+                        });
+                    });
+
+                    barOffset += sectionBarCount;
+
+                    if (section.rhythmTies && section.rhythmTies.length > 0) {
+                        section.rhythmTies.forEach(tie => {
+                            if (!tie || typeof tie.fromNoteIndex !== 'number' || typeof tie.toNoteIndex !== 'number') {
+                                return;
+                            }
+
+                            allTies.push({
+                                fromNoteIndex: tie.fromNoteIndex + noteOffset,
+                                toNoteIndex: tie.toNoteIndex + noteOffset
+                            });
+                        });
+                    }
+
+                    const sectionNoteCount = section.rhythmData.reduce((count, rhythm) => {
+                        return count + (rhythm && !rhythm.isPause ? 1 : 0);
+                    }, 0);
+                    noteOffset += sectionNoteCount;
                 }
             });
 
@@ -2429,6 +2552,7 @@
             if (allRhythms.length > 0) {
                 container.setAttribute('data-rhythm-sequence', JSON.stringify({
                     rhythms: allRhythms,
+                    ties: allTies,
                     timeSignature: tabData.timeSignature || DEFAULT_TIME_SIGNATURE
                 }));
             }
