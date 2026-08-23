@@ -1433,8 +1433,48 @@
     }
 
     // Also watch for dynamic content changes (when markdown is loaded)
-    const observer = new MutationObserver(() => {
-        initializePlaybackControls();
+    // Debounced and filtered to avoid expensive rescans on unrelated DOM churn
+    // (for example typing in the tab builder grid).
+    let playbackInitDebounce = null;
+
+    function schedulePlaybackInit() {
+        if (playbackInitDebounce) {
+            clearTimeout(playbackInitDebounce);
+        }
+        playbackInitDebounce = setTimeout(() => {
+            initializePlaybackControls();
+        }, 80);
+    }
+
+    function mutationNeedsPlaybackInit(mutations) {
+        for (const mutation of mutations) {
+            if (mutation.type !== 'childList') continue;
+
+            const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+            for (const node of changedNodes) {
+                if (!node || node.nodeType !== 1) continue;
+                const el = node;
+
+                // Ignore tab builder grid churn; it explicitly initializes playback for preview rebuilds.
+                if (el.closest && el.closest('.tab-builder-view')) {
+                    continue;
+                }
+
+                if (
+                    (el.matches && el.matches('.tablature-container, .md-content, pre > code.language-tabulature')) ||
+                    (el.querySelector && el.querySelector('.tablature-container, .md-content, pre > code.language-tabulature'))
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    const observer = new MutationObserver((mutations) => {
+        if (!mutationNeedsPlaybackInit(mutations)) return;
+        schedulePlaybackInit();
     });
 
     observer.observe(document.body, {

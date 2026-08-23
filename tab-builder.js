@@ -296,7 +296,9 @@
 
         const state = {
             slices: [createEmptySlice()],
-            selectedSlice: null
+            selectedSlice: null,
+            nonEmptySliceCount: 0,
+            visualSlicesPerRow: 23
         };
 
         function createEmptySlice() {
@@ -318,18 +320,35 @@
             return (value || '').replace(/\s+/g, ' ').trim();
         }
 
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
         function ensureTrailingEmptySlice() {
             if (state.slices.length === 0) {
                 state.slices.push(createEmptySlice());
                 return;
             }
 
-            const hasNonEmpty = state.slices.some(slice => !isSliceEmpty(slice));
             const lastSlice = state.slices[state.slices.length - 1];
 
-            if (hasNonEmpty && !isSliceEmpty(lastSlice)) {
+            if (state.nonEmptySliceCount > 0 && !isSliceEmpty(lastSlice)) {
                 state.slices.push(createEmptySlice());
             }
+        }
+
+        function recalculateNonEmptySliceCount() {
+            let count = 0;
+            for (let i = 0; i < state.slices.length; i++) {
+                if (!isSliceEmpty(state.slices[i])) {
+                    count += 1;
+                }
+            }
+            state.nonEmptySliceCount = count;
         }
 
         function clampSelection() {
@@ -375,6 +394,118 @@
             });
         }
 
+        function updateSliceHasContentClasses(sliceIndex, hasContent) {
+            if (typeof hasContent !== 'boolean') {
+                const slice = state.slices[sliceIndex];
+                if (!slice) return;
+                hasContent = !isSliceEmpty(slice);
+            }
+
+            board.querySelectorAll('.tab-builder-slice-cell[data-slice-index="' + sliceIndex + '"]').forEach(function (el) {
+                el.classList.toggle('has-content', hasContent);
+            });
+        }
+
+        function handleBoardFocusIn(event) {
+            const input = event.target.closest('.tab-builder-slice-cell input[data-slice][data-row]');
+            if (!input) return;
+            const sliceIndex = parseInt(input.getAttribute('data-slice'), 10);
+            if (!Number.isNaN(sliceIndex)) {
+                selectSlice(sliceIndex);
+            }
+        }
+
+        function handleBoardClick(event) {
+            const head = event.target.closest('.tab-builder-slice-head[data-slice-index]');
+            if (head && board.contains(head)) {
+                const sliceIndex = parseInt(head.getAttribute('data-slice-index'), 10);
+                if (!Number.isNaN(sliceIndex)) {
+                    selectSlice(sliceIndex);
+                }
+                return;
+            }
+
+            const cell = event.target.closest('.tab-builder-slice-cell[data-slice-index]');
+            if (!cell || !board.contains(cell)) return;
+
+            const sliceIndex = parseInt(cell.getAttribute('data-slice-index'), 10);
+            if (!Number.isNaN(sliceIndex)) {
+                selectSlice(sliceIndex);
+            }
+
+            const input = cell.querySelector('input[data-slice][data-row]');
+            if (input) input.focus();
+        }
+
+        function handleBoardInput(event) {
+            const input = event.target.closest('.tab-builder-slice-cell input[data-slice][data-row]');
+            if (!input || !board.contains(input)) return;
+
+            const sliceIndex = parseInt(input.getAttribute('data-slice'), 10);
+            const rowIndex = parseInt(input.getAttribute('data-row'), 10);
+            if (Number.isNaN(sliceIndex) || Number.isNaN(rowIndex)) return;
+
+            const visualRow = VISUAL_ROWS[rowIndex];
+            if (!visualRow) return;
+
+            const slice = state.slices[sliceIndex];
+            if (!slice) return;
+            const wasEmpty = isSliceEmpty(slice);
+
+            if (visualRow.kind === 'rhythm') {
+                slice.rhythm = input.value;
+            } else {
+                slice.strings[visualRow.stringIndex] = input.value;
+            }
+
+            const isEmpty = isSliceEmpty(slice);
+            if (wasEmpty !== isEmpty) {
+                state.nonEmptySliceCount += isEmpty ? -1 : 1;
+            }
+
+            if (wasEmpty !== isEmpty) {
+                updateSliceHasContentClasses(sliceIndex, !isEmpty);
+            }
+
+            const previousSliceCount = state.slices.length;
+            ensureTrailingEmptySlice();
+            const didAppendTrailingSlice = state.slices.length > previousSliceCount;
+
+            if (didAppendTrailingSlice) {
+                const didIncrementalAppend = tryAppendTrailingSliceIncremental(previousSliceCount);
+                if (!didIncrementalAppend) {
+                    render();
+                }
+                focusCell(sliceIndex, rowIndex);
+            }
+        }
+
+        function handleBoardKeyDown(event) {
+            const input = event.target.closest('.tab-builder-slice-cell input[data-slice][data-row]');
+            if (!input || !board.contains(input)) return;
+
+            const sliceIndex = parseInt(input.getAttribute('data-slice'), 10);
+            const rowIndex = parseInt(input.getAttribute('data-row'), 10);
+            if (Number.isNaN(sliceIndex) || Number.isNaN(rowIndex)) return;
+
+            if (event.key === 'ArrowRight' && sliceIndex < state.slices.length - 1) {
+                event.preventDefault();
+                focusCell(sliceIndex + 1, rowIndex);
+            }
+            if (event.key === 'ArrowLeft' && sliceIndex > 0) {
+                event.preventDefault();
+                focusCell(sliceIndex - 1, rowIndex);
+            }
+            if (event.key === 'ArrowUp' && rowIndex > 0) {
+                event.preventDefault();
+                focusCell(sliceIndex, rowIndex - 1);
+            }
+            if (event.key === 'ArrowDown' && rowIndex < VISUAL_ROWS.length - 1) {
+                event.preventDefault();
+                focusCell(sliceIndex, rowIndex + 1);
+            }
+        }
+
         function focusCell(sliceIndex, rowIndex) {
             const selector = 'input[data-slice="' + sliceIndex + '"][data-row="' + rowIndex + '"]';
             const input = board.querySelector(selector);
@@ -398,8 +529,10 @@
             return Math.max(MIN_VISUAL_SLICES_PER_ROW, Math.min(MAX_VISUAL_SLICES_PER_ROW, perRow));
         }
 
-        function buildVisualRows() {
-            const slicesPerRow = getDynamicSlicesPerRow();
+        function buildVisualRows(slicesPerRow) {
+            const perRow = Number.isFinite(slicesPerRow) && slicesPerRow > 0
+                ? slicesPerRow
+                : getDynamicSlicesPerRow();
             const allSliceIndexes = [];
             for (let i = 0; i < state.slices.length; i++) {
                 allSliceIndexes.push(i);
@@ -410,132 +543,129 @@
             }
 
             const rows = [];
-            for (let i = 0; i < allSliceIndexes.length; i += slicesPerRow) {
-                rows.push(allSliceIndexes.slice(i, i + slicesPerRow));
+            for (let i = 0; i < allSliceIndexes.length; i += perRow) {
+                rows.push(allSliceIndexes.slice(i, i + perRow));
             }
 
             return rows;
         }
 
-        function render() {
-            clampSelection();
-            board.innerHTML = '';
+        function getRowSliceIndexes(rowIndex, totalSlices, slicesPerRow) {
+            const start = rowIndex * slicesPerRow;
+            const end = Math.min(start + slicesPerRow, totalSlices);
+            const indexes = [];
+            for (let i = start; i < end; i++) {
+                indexes.push(i);
+            }
+            return indexes;
+        }
 
-            const visualRows = buildVisualRows();
-            visualRows.forEach(function (rowSlices) {
-                const row = document.createElement('div');
-                row.className = 'tab-builder-row';
-                row.style.gridTemplateColumns = '36px repeat(' + rowSlices.length + ', minmax(52px, 56px))';
-                row.style.gridTemplateRows = '30px repeat(' + VISUAL_ROWS.length + ', 30px)';
+        function buildRowMarkup(rowSlices) {
+            const htmlParts = [];
+            htmlParts.push(
+                '<div class="tab-builder-row" style="grid-template-columns:36px repeat(' + rowSlices.length + ', minmax(52px, 56px)); grid-template-rows:30px repeat(' + VISUAL_ROWS.length + ', 30px);">'
+            );
+            htmlParts.push('<div class="tab-builder-slice-head" style="min-width:36px; font-weight:700;">#</div>');
 
-                const topLeft = document.createElement('div');
-                topLeft.className = 'tab-builder-slice-head';
-                topLeft.textContent = '#';
-                topLeft.style.minWidth = '36px';
-                topLeft.style.fontWeight = '700';
-                row.appendChild(topLeft);
+            rowSlices.forEach(function (sliceIndex) {
+                const slice = state.slices[sliceIndex];
+                const headClasses = ['tab-builder-slice-head'];
+                if (state.selectedSlice === sliceIndex) headClasses.push('selected');
+                if (slice.barAfter) headClasses.push('bar-after');
+                if (slice.lineBreakAfter) headClasses.push('line-break-after');
+                htmlParts.push(
+                    '<div class="' + headClasses.join(' ') + '" data-slice-index="' + sliceIndex + '">' + (sliceIndex + 1) + '</div>'
+                );
+            });
+
+            for (let rowIndex = 0; rowIndex < VISUAL_ROWS.length; rowIndex++) {
+                const visualRow = VISUAL_ROWS[rowIndex];
+                const labelClasses = ['tab-builder-string-label'];
+                if (visualRow.kind === 'rhythm') labelClasses.push('rhythm-row');
+                htmlParts.push('<div class="' + labelClasses.join(' ') + '">' + escapeHtml(visualRow.label) + '</div>');
 
                 rowSlices.forEach(function (sliceIndex) {
                     const slice = state.slices[sliceIndex];
-                    const head = document.createElement('div');
-                    head.className = 'tab-builder-slice-head';
-                    head.setAttribute('data-slice-index', String(sliceIndex));
-                    head.textContent = String(sliceIndex + 1);
-                    if (state.selectedSlice === sliceIndex) head.classList.add('selected');
-                    if (slice.barAfter) head.classList.add('bar-after');
-                    if (slice.lineBreakAfter) head.classList.add('line-break-after');
-                    head.addEventListener('click', function () {
-                        selectSlice(sliceIndex);
-                    });
-                    row.appendChild(head);
-                });
+                    const cellClasses = ['tab-builder-slice-cell'];
+                    if (!isSliceEmpty(slice)) cellClasses.push('has-content');
+                    if (state.selectedSlice === sliceIndex) cellClasses.push('selected');
+                    if (slice.barAfter) cellClasses.push('bar-after');
+                    if (slice.lineBreakAfter) cellClasses.push('line-break-after');
+                    if (visualRow.kind === 'rhythm') cellClasses.push('rhythm-row');
 
-                for (let rowIndex = 0; rowIndex < VISUAL_ROWS.length; rowIndex++) {
-                    const visualRow = VISUAL_ROWS[rowIndex];
-                    const label = document.createElement('div');
-                    label.className = 'tab-builder-string-label';
-                    label.textContent = visualRow.label;
+                    let inputValue = '';
                     if (visualRow.kind === 'rhythm') {
-                        label.classList.add('rhythm-row');
+                        inputValue = slice.rhythm || '';
+                    } else {
+                        inputValue = slice.strings[visualRow.stringIndex];
                     }
-                    row.appendChild(label);
 
-                    rowSlices.forEach(function (sliceIndex) {
-                        const slice = state.slices[sliceIndex];
-                        const cell = document.createElement('div');
-                        cell.className = 'tab-builder-slice-cell';
-                        cell.setAttribute('data-slice-index', String(sliceIndex));
-                        if (!isSliceEmpty(slice)) cell.classList.add('has-content');
-                        if (state.selectedSlice === sliceIndex) cell.classList.add('selected');
-                        if (slice.barAfter) cell.classList.add('bar-after');
-                        if (slice.lineBreakAfter) cell.classList.add('line-break-after');
-                        if (visualRow.kind === 'rhythm') cell.classList.add('rhythm-row');
+                    htmlParts.push(
+                        '<div class="' + cellClasses.join(' ') + '" data-slice-index="' + sliceIndex + '">' +
+                            '<input data-slice="' + sliceIndex + '" data-row="' + rowIndex + '" placeholder="-" spellcheck="false" value="' + escapeHtml(inputValue || '') + '">' +
+                        '</div>'
+                    );
+                });
+            }
 
-                        const input = document.createElement('input');
-                        if (visualRow.kind === 'rhythm') {
-                            input.value = slice.rhythm || '';
-                        } else {
-                            input.value = slice.strings[visualRow.stringIndex];
-                        }
-                        input.setAttribute('data-slice', String(sliceIndex));
-                        input.setAttribute('data-row', String(rowIndex));
-                        input.placeholder = '-';
-                        input.spellcheck = false;
+            htmlParts.push('</div>');
+            return htmlParts.join('');
+        }
 
-                        input.addEventListener('focus', function () {
-                            selectSlice(sliceIndex);
-                        });
-                        input.addEventListener('click', function () {
-                            selectSlice(sliceIndex);
-                        });
+        function createRowElementFromMarkup(rowMarkup) {
+            const template = document.createElement('template');
+            template.innerHTML = rowMarkup;
+            return template.content.firstElementChild;
+        }
 
-                        cell.addEventListener('click', function () {
-                            selectSlice(sliceIndex);
-                            input.focus();
-                        });
+        function tryAppendTrailingSliceIncremental(previousSliceCount) {
+            const newSliceCount = state.slices.length;
+            if (newSliceCount !== previousSliceCount + 1) return false;
 
-                        input.addEventListener('input', function () {
-                            if (visualRow.kind === 'rhythm') {
-                                state.slices[sliceIndex].rhythm = input.value;
-                            } else {
-                                state.slices[sliceIndex].strings[visualRow.stringIndex] = input.value;
-                            }
-                            const hadTrailingEmpty = state.slices.length > 0 && isSliceEmpty(state.slices[state.slices.length - 1]);
-                            ensureTrailingEmptySlice();
-                            const hasTrailingEmpty = state.slices.length > 0 && isSliceEmpty(state.slices[state.slices.length - 1]);
+            const slicesPerRow = state.visualSlicesPerRow > 0
+                ? state.visualSlicesPerRow
+                : getDynamicSlicesPerRow();
+            const oldRowCount = Math.max(1, Math.ceil(previousSliceCount / slicesPerRow));
+            const newRowCount = Math.max(1, Math.ceil(newSliceCount / slicesPerRow));
+            const existingRows = board.querySelectorAll('.tab-builder-row');
 
-                            if (!hadTrailingEmpty && hasTrailingEmpty) {
-                                render();
-                                focusCell(sliceIndex, rowIndex);
-                            }
-                        });
+            // Guard against stale layout assumptions.
+            if (existingRows.length !== oldRowCount) return false;
 
-                        input.addEventListener('keydown', function (event) {
-                            if (event.key === 'ArrowRight' && sliceIndex < state.slices.length - 1) {
-                                event.preventDefault();
-                                focusCell(sliceIndex + 1, rowIndex);
-                            }
-                            if (event.key === 'ArrowLeft' && sliceIndex > 0) {
-                                event.preventDefault();
-                                focusCell(sliceIndex - 1, rowIndex);
-                            }
-                            if (event.key === 'ArrowUp' && rowIndex > 0) {
-                                event.preventDefault();
-                                focusCell(sliceIndex, rowIndex - 1);
-                            }
-                            if (event.key === 'ArrowDown' && rowIndex < VISUAL_ROWS.length - 1) {
-                                event.preventDefault();
-                                focusCell(sliceIndex, rowIndex + 1);
-                            }
-                        });
+            if (newRowCount === oldRowCount) {
+                const rowSlices = getRowSliceIndexes(newRowCount - 1, newSliceCount, slicesPerRow);
+                const newRowEl = createRowElementFromMarkup(buildRowMarkup(rowSlices));
+                const oldLastRow = existingRows[newRowCount - 1];
+                if (!newRowEl || !oldLastRow) return false;
+                board.replaceChild(newRowEl, oldLastRow);
+                updateStatus();
+                return true;
+            }
 
-                        cell.appendChild(input);
-                        row.appendChild(cell);
-                    });
-                }
+            if (newRowCount === oldRowCount + 1) {
+                const rowSlices = getRowSliceIndexes(newRowCount - 1, newSliceCount, slicesPerRow);
+                const newRowEl = createRowElementFromMarkup(buildRowMarkup(rowSlices));
+                if (!newRowEl) return false;
+                board.appendChild(newRowEl);
+                updateStatus();
+                return true;
+            }
 
-                board.appendChild(row);
+            return false;
+        }
+
+        function render() {
+            clampSelection();
+            const htmlParts = [];
+            const slicesPerRow = getDynamicSlicesPerRow();
+            state.visualSlicesPerRow = slicesPerRow;
+            const visualRows = buildVisualRows(slicesPerRow);
+
+            visualRows.forEach(function (rowSlices) {
+                htmlParts.push(buildRowMarkup(rowSlices));
             });
+
+            board.innerHTML = htmlParts.join('');
 
             updateStatus();
         }
@@ -576,12 +706,18 @@
             if (state.selectedSlice === null) return;
             if (state.slices.length === 1) {
                 state.slices[0] = createEmptySlice();
+                state.nonEmptySliceCount = 0;
                 state.selectedSlice = 0;
                 render();
                 return;
             }
 
+            const deletedSlice = state.slices[state.selectedSlice];
+            const deletedWasNonEmpty = deletedSlice && !isSliceEmpty(deletedSlice);
             state.slices.splice(state.selectedSlice, 1);
+            if (deletedWasNonEmpty) {
+                state.nonEmptySliceCount = Math.max(0, state.nonEmptySliceCount - 1);
+            }
             if (state.selectedSlice >= state.slices.length) {
                 state.selectedSlice = state.slices.length - 1;
             }
@@ -786,15 +922,23 @@
         container.querySelector('[data-action="download-export"]').addEventListener('click', downloadExport);
         container.querySelector('[data-action="clear-all"]').addEventListener('click', function () {
             state.slices = [createEmptySlice()];
+            state.nonEmptySliceCount = 0;
             state.selectedSlice = 0;
             render();
             buildExportAndPreview();
         });
 
+        board.addEventListener('focusin', handleBoardFocusIn);
+        board.addEventListener('click', handleBoardClick);
+        board.addEventListener('input', handleBoardInput);
+        board.addEventListener('keydown', handleBoardKeyDown);
+
         window.addEventListener('resize', function () {
             render();
         });
 
+        recalculateNonEmptySliceCount();
+        ensureTrailingEmptySlice();
         render();
         buildExportAndPreview();
         container.dataset.tabBuilderReady = '1';
