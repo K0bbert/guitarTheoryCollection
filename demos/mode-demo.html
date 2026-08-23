@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mode Transformer Demo</title>
-    <link rel="stylesheet" href="fretboard.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../assets/css/fretboard.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -47,15 +47,15 @@
     <!-- This container will be populated by JavaScript -->
     <div id="church-modes-grid-2" class="fretboard-grid"></div>
 
-    <script src="fretboard.js"></script>
-    <script src="fretboard-grid.js"></script>
-    <script src="mode-transformer.js"></script>
+    <script src="../scripts/engine/fretboard.js"></script>
+    <script src="../scripts/engine/fretboard-grid.js"></script>
+    <script src="../scripts/engine/mode-transformer.js"></script>
     <script>
         console.log('[Demo] Scripts loaded');
         console.log('[Demo] Fretboard available:', typeof Fretboard);
         console.log('[Demo] initFretboardGrids available:', typeof initFretboardGrids);
         console.log('[Demo] ModeTransformer available:', typeof ModeTransformer);
-        
+
         // Define the church-modes-grid-2 configuration
         const churchModesGrid2Config = {
             "id": "church-modes-grid-2",
@@ -260,7 +260,7 @@
             if (window.initFretboardGrids) {
                 console.log('[Demo] Initializing fretboard grids...');
                 window.initFretboardGrids(document.body);
-                
+
                 // Verify what was created
                 setTimeout(() => {
                     console.log('[Demo] Verification after grid init:');

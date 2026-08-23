@@ -2,7 +2,7 @@
 
 // Set Home link as active on initial load
 document.addEventListener('DOMContentLoaded', () => {
-  const homeLink = document.querySelector('.burger-nav a[data-page="header.md"]');
+  const homeLink = document.querySelector('.burger-nav a[data-page="content/header.md"]');
   if (homeLink) {
     homeLink.classList.add('active');
   }

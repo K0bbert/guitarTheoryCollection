@@ -65,7 +65,7 @@ GMin/ EbMaj/ GMin/ FMaj
 
 Relative Major/ Minor Keys:
 
-![Circle of fifths](./img/circle_of_fifths.png)
+![Circle of fifths](./assets/img/circle_of_fifths.png)
 
 --> You just have to look at the chords:
 | Major Chords - Flat                                | Major Chords                                   | Major Chords - Sharp                              |
