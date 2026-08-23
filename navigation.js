@@ -56,6 +56,12 @@ navLinks.forEach(link => {
     const targetSection = document.querySelector(`[data-md="${page}"]`);
     if (targetSection) {
       targetSection.style.display = 'block';
+      document.dispatchEvent(new CustomEvent('md-content:show', {
+        detail: {
+          node: targetSection,
+          path: page
+        }
+      }));
     }
   });
 });
