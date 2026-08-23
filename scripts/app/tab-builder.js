@@ -733,7 +733,7 @@
                 if (!didIncrementalAppend) {
                     render();
                 }
-                focusCell(sliceIndex, rowIndex);
+                focusCell(sliceIndex, rowIndex, true);
             }
         }
 
@@ -763,10 +763,24 @@
             }
         }
 
-        function focusCell(sliceIndex, rowIndex) {
+        function focusCell(sliceIndex, rowIndex, moveCaretToEnd) {
             const selector = 'input[data-slice="' + sliceIndex + '"][data-row="' + rowIndex + '"]';
             const input = board.querySelector(selector);
-            if (input) input.focus();
+            if (!input) return;
+
+            input.focus();
+
+            // After append-triggered rerenders the browser can place the caret at
+            // the start of the restored input; move it to the end so typing 12
+            // does not become 21.
+            if (moveCaretToEnd) {
+                const valueLength = input.value.length;
+                try {
+                    input.setSelectionRange(valueLength, valueLength);
+                } catch (e) {
+                    // Ignore non-text input selection errors.
+                }
+            }
         }
 
         function getDynamicSlicesPerRow() {
