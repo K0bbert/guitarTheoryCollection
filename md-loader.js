@@ -70,6 +70,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.initKeyChordMapView) {
                 try { window.initKeyChordMapView(); } catch (e) { console.error(e); }
             }
+            // initialize tab builder view if present in injected markdown
+            if (window.initTabBuilderView && path === 'tab-builder.md') {
+                try { window.initTabBuilderView(node); } catch (e) { console.error(e); }
+            }
         } catch (e) {
             console.warn('Failed to load markdown', path, e);
         }

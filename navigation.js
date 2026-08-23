@@ -31,8 +31,12 @@ burgerOverlay.addEventListener('click', () => {
 // Handle page navigation
 navLinks.forEach(link => {
   link.addEventListener('click', (e) => {
-    e.preventDefault();
     const page = link.getAttribute('data-page');
+    if (!page) {
+      return;
+    }
+
+    e.preventDefault();
 
     // Close menu
     burgerIcon.classList.remove('open');
