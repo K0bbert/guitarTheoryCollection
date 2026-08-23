@@ -243,7 +243,9 @@
             <button data-action="clear-all">Clear All</button>
             <button data-action="build-export" class="primary">Build Export</button>
             <button data-action="copy-export">Copy Export</button>
+                        <button data-action="import-tab">Import Tab</button>
             <button data-action="download-export">Download .txt</button>
+                        <input type="file" data-role="import-file" accept=".txt,.md,.json,text/plain,application/json" style="display:none;" />
           </div>
 
           <div class="tab-builder-board-wrap">
@@ -293,6 +295,7 @@
         const tuningInput = container.querySelector('[data-role="tuning"]');
         const timeInput = container.querySelector('[data-role="time"]');
         const keyInput = container.querySelector('[data-role="key"]');
+        const importFileInput = container.querySelector('[data-role="import-file"]');
 
         const state = {
             slices: [createEmptySlice()],
@@ -339,6 +342,260 @@
             if (state.nonEmptySliceCount > 0 && !isSliceEmpty(lastSlice)) {
                 state.slices.push(createEmptySlice());
             }
+        }
+
+        function getSlicesForExport() {
+            const slices = state.slices.filter(function (slice, idx) {
+                if (!isSliceEmpty(slice)) return true;
+                return idx !== state.slices.length - 1;
+            });
+
+            return slices.map(function (slice) {
+                return {
+                    strings: slice.strings.map(function (value) {
+                        return value == null ? '' : String(value);
+                    }),
+                    rhythm: slice.rhythm == null ? '' : String(slice.rhythm),
+                    barAfter: !!slice.barAfter,
+                    lineBreakAfter: !!slice.lineBreakAfter
+                };
+            });
+        }
+
+        function getSliceExportWidth(slice) {
+            const normalized = slice.strings.map(function (raw) {
+                const token = sanitizeToken(raw);
+                return token || '-';
+            });
+            const normalizedRhythm = sanitizeToken(slice.rhythm) || '-';
+            return Math.max(1, normalizedRhythm.length, ...normalized.map(function (v) { return v.length; }));
+        }
+
+        function splitContentIntoSections(contentLines) {
+            const sections = [];
+            let current = [];
+
+            for (let i = 0; i < contentLines.length; i++) {
+                const line = contentLines[i];
+                if (line === '' || line == null) {
+                    if (current.length > 0) {
+                        sections.push(current);
+                        current = [];
+                    }
+                } else {
+                    current.push(String(line));
+                }
+            }
+
+            if (current.length > 0) {
+                sections.push(current);
+            }
+
+            return sections;
+        }
+
+        function parseSlicesFromContent(contentLines, sliceWidths) {
+            if (!Array.isArray(contentLines)) return null;
+
+            const sections = splitContentIntoSections(contentLines);
+            if (sections.length === 0) return [];
+
+            const widths = Array.isArray(sliceWidths)
+                ? sliceWidths.map(function (w) { return parseInt(w, 10); })
+                : [];
+            let widthIndex = 0;
+            const parsedSlices = [];
+
+            for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+                const section = sections[sectionIndex];
+                if (section.length !== 7) {
+                    return null;
+                }
+
+                const stringLines = section.slice(0, 6);
+                const rhythmLine = section[6];
+                const lineLength = stringLines[0].length;
+
+                if (!stringLines.every(function (line) { return line.length === lineLength; }) || rhythmLine.length !== lineLength) {
+                    return null;
+                }
+
+                if (lineLength < 2 || stringLines[0][0] !== '|' || stringLines[0][lineLength - 1] !== '|') {
+                    return null;
+                }
+
+                let cursor = 1;
+                let sectionSliceCount = 0;
+
+                while (cursor < lineLength - 1) {
+                    const width = widths[widthIndex];
+                    if (!Number.isFinite(width) || width <= 0) {
+                        return null;
+                    }
+
+                    if (cursor + 1 + width > lineLength - 1) {
+                        return null;
+                    }
+
+                    const slice = createEmptySlice();
+
+                    for (let stringIndex = 0; stringIndex < STRING_COUNT; stringIndex++) {
+                        const line = stringLines[stringIndex];
+                        if (line[cursor] !== '-') {
+                            return null;
+                        }
+                        const rawToken = line.slice(cursor + 1, cursor + 1 + width);
+                        const token = rawToken.replace(/-+$/g, '');
+                        slice.strings[stringIndex] = token === '-' ? '' : token;
+                    }
+
+                    if (rhythmLine[cursor] !== '-') {
+                        return null;
+                    }
+
+                    const rawRhythm = rhythmLine.slice(cursor + 1, cursor + 1 + width);
+                    const rhythmToken = rawRhythm.replace(/-+$/g, '');
+                    slice.rhythm = rhythmToken === '-' ? '' : rhythmToken;
+
+                    const afterTokenIndex = cursor + 1 + width;
+                    const barAfter =
+                        afterTokenIndex + 1 < lineLength &&
+                        stringLines[0][afterTokenIndex] === '-' &&
+                        stringLines[0][afterTokenIndex + 1] === '|';
+
+                    // If one line has a bar marker, all lines should match.
+                    if (barAfter) {
+                        for (let i = 1; i < STRING_COUNT; i++) {
+                            if (stringLines[i][afterTokenIndex] !== '-' || stringLines[i][afterTokenIndex + 1] !== '|') {
+                                return null;
+                            }
+                        }
+                        if (rhythmLine[afterTokenIndex] !== '-' || rhythmLine[afterTokenIndex + 1] !== '|') {
+                            return null;
+                        }
+                    }
+
+                    slice.barAfter = barAfter;
+                    parsedSlices.push(slice);
+                    sectionSliceCount += 1;
+                    widthIndex += 1;
+
+                    cursor = afterTokenIndex + (barAfter ? 2 : 0);
+                }
+
+                if (sectionSliceCount > 0) {
+                    parsedSlices[parsedSlices.length - 1].lineBreakAfter = true;
+                }
+            }
+
+            if (parsedSlices.length > 0) {
+                parsedSlices[parsedSlices.length - 1].lineBreakAfter = false;
+            }
+
+            if (widths.length !== widthIndex) {
+                return null;
+            }
+
+            return parsedSlices;
+        }
+
+        function extractJsonPayload(text) {
+            const raw = (text || '').trim();
+            if (!raw) return '';
+
+            const fencedBlocks = [];
+            const fencedRegex = /```([\w-]*)\s*([\s\S]*?)```/g;
+            let match;
+            while ((match = fencedRegex.exec(raw)) !== null) {
+                fencedBlocks.push({
+                    language: (match[1] || '').toLowerCase(),
+                    body: (match[2] || '').trim()
+                });
+            }
+
+            if (fencedBlocks.length > 0) {
+                const preferred = fencedBlocks.find(function (block) {
+                    return block.language === 'tabulature' && block.body.includes('"builderImportMeta"');
+                }) || fencedBlocks.find(function (block) {
+                    return block.body.includes('"builderImportMeta"') && block.body.includes('"content"');
+                }) || fencedBlocks.find(function (block) {
+                    return block.language === 'tabulature';
+                }) || fencedBlocks[0];
+
+                if (preferred && preferred.body) {
+                    return preferred.body;
+                }
+            }
+
+            const firstBrace = raw.indexOf('{');
+            const lastBrace = raw.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace > firstBrace) {
+                return raw.slice(firstBrace, lastBrace + 1);
+            }
+
+            return raw;
+        }
+
+        function importTabFromText(rawText) {
+            const jsonPayload = extractJsonPayload(rawText);
+            if (!jsonPayload) {
+                window.alert('Nothing to import. Paste a tabulature export first.');
+                return;
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(jsonPayload);
+            } catch (error) {
+                window.alert('Import failed: invalid JSON payload.');
+                return;
+            }
+
+            const importMeta = parsed.builderImportMeta || {};
+            const importedSlices = parseSlicesFromContent(parsed.content, importMeta.sliceWidths);
+            if (importedSlices === null) {
+                status.textContent = 'Import failed: invalid tab payload';
+                return;
+            }
+
+            state.slices = importedSlices.length > 0 ? importedSlices : [createEmptySlice()];
+
+            if (typeof parsed.tuning === 'string' && parsed.tuning.trim()) {
+                tuningInput.value = parsed.tuning;
+            }
+            if (typeof parsed.time === 'string' && parsed.time.trim()) {
+                timeInput.value = parsed.time;
+            }
+            if (typeof parsed.key === 'string') {
+                keyInput.value = parsed.key;
+            } else {
+                keyInput.value = '';
+            }
+
+            recalculateNonEmptySliceCount();
+            ensureTrailingEmptySlice();
+            state.selectedSlice = 0;
+
+            render();
+            buildExportAndPreview();
+        }
+
+        function importTabFromSelectedFile() {
+            if (!importFileInput) return;
+            importFileInput.value = '';
+            importFileInput.click();
+        }
+
+        function handleImportFileChange(event) {
+            const input = event.target;
+            const file = input && input.files && input.files[0] ? input.files[0] : null;
+            if (!file) return;
+
+            file.text().then(function (text) {
+                importTabFromText(text);
+            }).catch(function () {
+                status.textContent = 'Import failed: could not read file';
+            });
         }
 
         function recalculateNonEmptySliceCount() {
@@ -622,6 +879,12 @@
             const newSliceCount = state.slices.length;
             if (newSliceCount !== previousSliceCount + 1) return false;
 
+            const currentSlicesPerRow = getDynamicSlicesPerRow();
+            if (currentSlicesPerRow !== state.visualSlicesPerRow) {
+                state.visualSlicesPerRow = currentSlicesPerRow;
+                return false;
+            }
+
             const slicesPerRow = state.visualSlicesPerRow > 0
                 ? state.visualSlicesPerRow
                 : getDynamicSlicesPerRow();
@@ -761,10 +1024,7 @@
         }
 
         function buildTabLines() {
-            const slicesToExport = state.slices.filter(function (slice, idx) {
-                if (!isSliceEmpty(slice)) return true;
-                return idx !== state.slices.length - 1;
-            });
+            const slicesToExport = getSlicesForExport();
 
             if (slicesToExport.length === 0) {
                 return Array(STRING_COUNT + 1).fill('|-|');
@@ -831,6 +1091,8 @@
 
         function buildExportText() {
             const contentLines = buildTabLines();
+            const slicesForExport = getSlicesForExport();
+            const sliceWidthsForImport = slicesForExport.map(getSliceExportWidth);
             const tuning = tuningInput.value.trim() || 'E A D G B E';
             const time = timeInput.value.trim() || '4/4';
             const key = keyInput.value.trim();
@@ -850,7 +1112,8 @@
                 out.push('    "' + line.replace(/"/g, '\\"') + '"' + comma);
             });
 
-            out.push('  ]');
+            out.push('  ],');
+            out.push('  "builderImportMeta": ' + JSON.stringify({ v: 1, sliceWidths: sliceWidthsForImport }));
             out.push('}');
             out.push('```');
             return out.join('\n');
@@ -919,7 +1182,11 @@
         container.querySelector('[data-action="toggle-line-break"]').addEventListener('click', function () { toggleLineBreakAfterSelected(); });
         container.querySelector('[data-action="build-export"]').addEventListener('click', buildExportAndPreview);
         container.querySelector('[data-action="copy-export"]').addEventListener('click', copyExport);
+        container.querySelector('[data-action="import-tab"]').addEventListener('click', importTabFromSelectedFile);
         container.querySelector('[data-action="download-export"]').addEventListener('click', downloadExport);
+        if (importFileInput) {
+            importFileInput.addEventListener('change', handleImportFileChange);
+        }
         container.querySelector('[data-action="clear-all"]').addEventListener('click', function () {
             state.slices = [createEmptySlice()];
             state.nonEmptySliceCount = 0;
@@ -932,6 +1199,16 @@
         board.addEventListener('click', handleBoardClick);
         board.addEventListener('input', handleBoardInput);
         board.addEventListener('keydown', handleBoardKeyDown);
+
+        if (typeof ResizeObserver === 'function' && boardWrap) {
+            const boardWrapResizeObserver = new ResizeObserver(function () {
+                const currentSlicesPerRow = getDynamicSlicesPerRow();
+                if (currentSlicesPerRow !== state.visualSlicesPerRow) {
+                    render();
+                }
+            });
+            boardWrapResizeObserver.observe(boardWrap);
+        }
 
         window.addEventListener('resize', function () {
             render();
