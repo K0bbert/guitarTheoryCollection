@@ -144,6 +144,24 @@
           pointer-events: none;
           z-index: 3;
         }
+
+                .tab-builder-slice-head.line-break-after::before,
+                .tab-builder-slice-cell.line-break-after::before {
+                    content: "";
+                    position: absolute;
+                    right: -6px;
+                    top: -4px;
+                    bottom: -4px;
+                    width: 0;
+                    border-right: 2px dashed #7a8a88;
+                    pointer-events: none;
+                    z-index: 2;
+                }
+
+                .tab-builder-slice-head.bar-after.line-break-after::before,
+                .tab-builder-slice-cell.bar-after.line-break-after::before {
+                    right: -11px;
+                }
         .tab-builder-slice-cell {
           padding: 0;
           min-width: 56px;
@@ -221,7 +239,7 @@
             <button data-action="append-slice">Append Slice</button>
             <button data-action="delete-slice" class="danger">Delete Selected Slice</button>
             <button data-action="toggle-bar" class="warn">Toggle Bar After Selected</button>
-            <button data-action="finish-bar">Finish Bar After Selected</button>
+            <button data-action="toggle-line-break" class="warn">Toggle Line Break After Selected</button>
             <button data-action="clear-all">Clear All</button>
             <button data-action="build-export" class="primary">Build Export</button>
             <button data-action="copy-export">Copy Export</button>
@@ -285,7 +303,8 @@
             return {
                 strings: Array(STRING_COUNT).fill(''),
                 rhythm: '',
-                barAfter: false
+                barAfter: false,
+                lineBreakAfter: false
             };
         }
 
@@ -329,7 +348,8 @@
 
             const slice = state.slices[state.selectedSlice];
             const bar = slice && slice.barAfter ? ', bar after' : '';
-            status.textContent = 'Selected slice: ' + (state.selectedSlice + 1) + bar;
+            const breakLabel = slice && slice.lineBreakAfter ? ', line break after' : '';
+            status.textContent = 'Selected slice: ' + (state.selectedSlice + 1) + bar + breakLabel;
         }
 
         function selectSlice(index) {
@@ -423,6 +443,7 @@
                     head.textContent = String(sliceIndex + 1);
                     if (state.selectedSlice === sliceIndex) head.classList.add('selected');
                     if (slice.barAfter) head.classList.add('bar-after');
+                    if (slice.lineBreakAfter) head.classList.add('line-break-after');
                     head.addEventListener('click', function () {
                         selectSlice(sliceIndex);
                     });
@@ -447,6 +468,7 @@
                         if (!isSliceEmpty(slice)) cell.classList.add('has-content');
                         if (state.selectedSlice === sliceIndex) cell.classList.add('selected');
                         if (slice.barAfter) cell.classList.add('bar-after');
+                        if (slice.lineBreakAfter) cell.classList.add('line-break-after');
                         if (visualRow.kind === 'rhythm') cell.classList.add('rhythm-row');
 
                         const input = document.createElement('input');
@@ -570,11 +592,33 @@
         function toggleBarAfterSelected(forceOn) {
             if (state.selectedSlice === null) return;
             if (state.selectedSlice < 0 || state.selectedSlice >= state.slices.length) return;
+            const slice = state.slices[state.selectedSlice];
+            const wasLastSlice = state.selectedSlice === state.slices.length - 1;
 
             if (typeof forceOn === 'boolean') {
-                state.slices[state.selectedSlice].barAfter = forceOn;
+                slice.barAfter = forceOn;
             } else {
-                state.slices[state.selectedSlice].barAfter = !state.slices[state.selectedSlice].barAfter;
+                slice.barAfter = !slice.barAfter;
+            }
+
+            // Special case: if bar is toggled on at the final slice,
+            // add a new empty slice right after the bar.
+            if (slice.barAfter && wasLastSlice) {
+                state.slices.push(createEmptySlice());
+                state.selectedSlice = state.slices.length - 1;
+            }
+
+            render();
+        }
+
+        function toggleLineBreakAfterSelected(forceOn) {
+            if (state.selectedSlice === null) return;
+            if (state.selectedSlice < 0 || state.selectedSlice >= state.slices.length) return;
+
+            if (typeof forceOn === 'boolean') {
+                state.slices[state.selectedSlice].lineBreakAfter = forceOn;
+            } else {
+                state.slices[state.selectedSlice].lineBreakAfter = !state.slices[state.selectedSlice].lineBreakAfter;
             }
 
             render();
@@ -590,9 +634,19 @@
                 return Array(STRING_COUNT + 1).fill('|-|');
             }
 
-            const lines = Array(STRING_COUNT + 1).fill('').map(function () {
+            let lines = Array(STRING_COUNT + 1).fill('').map(function () {
                 return '|';
             });
+            const content = [];
+
+            function flushSection() {
+                const sectionLines = lines.map(function (line) {
+                    return line.endsWith('|') ? line : line + '|';
+                });
+                sectionLines.forEach(function (sectionLine) {
+                    content.push(sectionLine);
+                });
+            }
 
             slicesToExport.forEach(function (slice) {
                 const normalized = slice.strings.map(function (raw) {
@@ -616,11 +670,27 @@
                 if (slice.barAfter) {
                     lines[rhythmLineIndex] += '-|';
                 }
+
+                if (slice.lineBreakAfter) {
+                    flushSection();
+                    content.push('');
+                    lines = Array(STRING_COUNT + 1).fill('').map(function () {
+                        return '|';
+                    });
+                }
             });
 
-            return lines.map(function (line) {
-                return line.endsWith('|') ? line : line + '|';
+            const hasContentInCurrentSection = lines.some(function (line) {
+                return line !== '|';
             });
+
+            if (hasContentInCurrentSection) {
+                flushSection();
+            } else if (content.length > 0 && content[content.length - 1] === '') {
+                content.pop();
+            }
+
+            return content;
         }
 
         function buildExportText() {
@@ -710,7 +780,7 @@
         container.querySelector('[data-action="append-slice"]').addEventListener('click', function () { insertSlice(false); });
         container.querySelector('[data-action="delete-slice"]').addEventListener('click', deleteSelectedSlice);
         container.querySelector('[data-action="toggle-bar"]').addEventListener('click', function () { toggleBarAfterSelected(); });
-        container.querySelector('[data-action="finish-bar"]').addEventListener('click', function () { toggleBarAfterSelected(true); });
+        container.querySelector('[data-action="toggle-line-break"]').addEventListener('click', function () { toggleLineBreakAfterSelected(); });
         container.querySelector('[data-action="build-export"]').addEventListener('click', buildExportAndPreview);
         container.querySelector('[data-action="copy-export"]').addEventListener('click', copyExport);
         container.querySelector('[data-action="download-export"]').addEventListener('click', downloadExport);
