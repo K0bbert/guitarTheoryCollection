@@ -24,6 +24,10 @@
           border: 1px solid #dbd4c7;
           border-radius: 12px;
           padding: 10px;
+                    position: sticky;
+                      top: 20px;
+                    z-index: 40;
+                    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
         }
         .tab-builder-toolbar button {
           border: 1px solid #dbd4c7;
@@ -800,22 +804,33 @@
             return Math.max(MIN_VISUAL_SLICES_PER_ROW, Math.min(MAX_VISUAL_SLICES_PER_ROW, perRow));
         }
 
-        function buildVisualRows(slicesPerRow) {
+        function buildVisualRows(slicesPerRow, totalSlicesOverride) {
             const perRow = Number.isFinite(slicesPerRow) && slicesPerRow > 0
                 ? slicesPerRow
                 : getDynamicSlicesPerRow();
-            const allSliceIndexes = [];
-            for (let i = 0; i < state.slices.length; i++) {
-                allSliceIndexes.push(i);
-            }
+            const totalSlices = Number.isFinite(totalSlicesOverride) && totalSlicesOverride >= 0
+                ? Math.min(state.slices.length, Math.floor(totalSlicesOverride))
+                : state.slices.length;
 
-            if (allSliceIndexes.length === 0) {
+            if (totalSlices === 0) {
                 return [[0]];
             }
 
             const rows = [];
-            for (let i = 0; i < allSliceIndexes.length; i += perRow) {
-                rows.push(allSliceIndexes.slice(i, i + perRow));
+            let currentRow = [];
+
+            for (let i = 0; i < totalSlices; i++) {
+                const slice = state.slices[i];
+                currentRow.push(i);
+
+                if (currentRow.length >= perRow || (slice && slice.lineBreakAfter)) {
+                    rows.push(currentRow);
+                    currentRow = [];
+                }
+            }
+
+            if (currentRow.length > 0) {
+                rows.push(currentRow);
             }
 
             return rows;
@@ -902,15 +917,17 @@
             const slicesPerRow = state.visualSlicesPerRow > 0
                 ? state.visualSlicesPerRow
                 : getDynamicSlicesPerRow();
-            const oldRowCount = Math.max(1, Math.ceil(previousSliceCount / slicesPerRow));
-            const newRowCount = Math.max(1, Math.ceil(newSliceCount / slicesPerRow));
+            const oldRows = buildVisualRows(slicesPerRow, previousSliceCount);
+            const newRows = buildVisualRows(slicesPerRow, newSliceCount);
+            const oldRowCount = oldRows.length;
+            const newRowCount = newRows.length;
             const existingRows = board.querySelectorAll('.tab-builder-row');
 
             // Guard against stale layout assumptions.
             if (existingRows.length !== oldRowCount) return false;
 
             if (newRowCount === oldRowCount) {
-                const rowSlices = getRowSliceIndexes(newRowCount - 1, newSliceCount, slicesPerRow);
+                const rowSlices = newRows[newRowCount - 1];
                 const newRowEl = createRowElementFromMarkup(buildRowMarkup(rowSlices));
                 const oldLastRow = existingRows[newRowCount - 1];
                 if (!newRowEl || !oldLastRow) return false;
@@ -920,7 +937,7 @@
             }
 
             if (newRowCount === oldRowCount + 1) {
-                const rowSlices = getRowSliceIndexes(newRowCount - 1, newSliceCount, slicesPerRow);
+                const rowSlices = newRows[newRowCount - 1];
                 const newRowEl = createRowElementFromMarkup(buildRowMarkup(rowSlices));
                 if (!newRowEl) return false;
                 board.appendChild(newRowEl);
@@ -1035,6 +1052,7 @@
             }
 
             render();
+            rebuildExport();
         }
 
         function buildTabLines() {
