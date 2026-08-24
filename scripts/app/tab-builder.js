@@ -787,6 +787,19 @@
             }
         }
 
+        function isEditingBoardCell() {
+            const active = document.activeElement;
+            if (!active || !board.contains(active)) return false;
+            return !!active.matches('.tab-builder-slice-cell input[data-slice][data-row]');
+        }
+
+        function rerenderIfLayoutChanged() {
+            const currentSlicesPerRow = getDynamicSlicesPerRow();
+            if (currentSlicesPerRow !== state.visualSlicesPerRow) {
+                render();
+            }
+        }
+
         function getDynamicSlicesPerRow() {
             if (!boardWrap) return 23;
 
@@ -1234,16 +1247,15 @@
 
         if (typeof ResizeObserver === 'function' && boardWrap) {
             const boardWrapResizeObserver = new ResizeObserver(function () {
-                const currentSlicesPerRow = getDynamicSlicesPerRow();
-                if (currentSlicesPerRow !== state.visualSlicesPerRow) {
-                    render();
-                }
+                if (isEditingBoardCell()) return;
+                rerenderIfLayoutChanged();
             });
             boardWrapResizeObserver.observe(boardWrap);
         }
 
         window.addEventListener('resize', function () {
-            render();
+            if (isEditingBoardCell()) return;
+            rerenderIfLayoutChanged();
         });
 
         recalculateNonEmptySliceCount();
