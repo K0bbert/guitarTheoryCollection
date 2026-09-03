@@ -1685,6 +1685,92 @@
         return base === 'e' || base === 's' || base === 'f';
     }
 
+    function isWholeNumber(value) {
+        return Math.abs(value - Math.round(value)) < 0.0001;
+    }
+
+    function crossesInternalBeatBoundary(startBeat, endBeat, beatsPerBar) {
+        for (let beat = 1; beat < beatsPerBar; beat++) {
+            if (startBeat < (beat - 0.0001) && endBeat > (beat + 0.0001)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function splitBeamGroupByMeter(noteGroup, beatsPerBar) {
+        if (!Array.isArray(noteGroup) || noteGroup.length <= 1) {
+            return [noteGroup];
+        }
+
+        const allSimpleEighths = noteGroup.every(note => {
+            if (!note || !note.rhythm) return false;
+            const base = getBaseRhythm(note.rhythm);
+            return base === 'e' && !note.rhythm.includes('.') && !isTriplet(note.rhythm);
+        });
+
+        const results = [];
+        let current = [noteGroup[0]];
+
+        for (let i = 1; i < noteGroup.length; i++) {
+            const currentNote = noteGroup[i];
+            const boundaryBeat = currentNote.startBeat;
+            let shouldSplit = false;
+
+            if (isWholeNumber(boundaryBeat) && boundaryBeat > 0 && boundaryBeat < beatsPerBar) {
+                shouldSplit = true;
+
+                if (beatsPerBar === 4 && allSimpleEighths && (boundaryBeat === 1 || boundaryBeat === 3)) {
+                    const halfStart = boundaryBeat < 2 ? 0 : 2;
+                    const halfEnd = halfStart + 2;
+                    const segmentStartBeat = current[0].startBeat;
+                    const segmentCanFillHalfBar = Math.abs(segmentStartBeat - halfStart) < 0.0001 &&
+                                                 noteGroup[noteGroup.length - 1].endBeat >= (halfEnd - 0.0001);
+
+                    if (segmentCanFillHalfBar) {
+                        shouldSplit = false;
+                    }
+                }
+            }
+
+            if (shouldSplit) {
+                results.push(current);
+                current = [currentNote];
+            } else {
+                current.push(currentNote);
+            }
+        }
+
+        if (current.length > 0) {
+            results.push(current);
+        }
+
+        return results;
+    }
+
+    function finalizeBeamGroup(svg, beamGroup, beatsPerBar) {
+        if (!Array.isArray(beamGroup) || beamGroup.length === 0) {
+            return [];
+        }
+
+        const normalizedGroups = splitBeamGroupByMeter(beamGroup, beatsPerBar);
+        const elements = [];
+
+        normalizedGroups.forEach(group => {
+            if (!group || group.length === 0) return;
+
+            if (group.length >= 2) {
+                elements.push(...renderBeamedNotes(svg, group, 'mixed'));
+            } else {
+                const note = group[0];
+                const element = renderRhythmStem(svg, note.x, note.rhythm, false, false, null, false);
+                if (element) elements.push(element);
+            }
+        });
+
+        return elements;
+    }
+
     /**
      * Get duration in beats for a rhythm symbol
      * In 4/4 time: whole=4, half=2, quarter=1, eighth=0.5, sixteenth=0.25, 32nd=0.125
@@ -1758,6 +1844,12 @@
             beatsPerBar,
             crossesBoundary: prevBeatPos <= (beatsPerBar / 2) && currentStartPos >= (beatsPerBar / 2)
         });
+
+        // If the incoming note itself crosses a beat boundary, start a new beam group.
+        // This avoids misleading mixed-subdivision groups like e-s-e spanning over beat lines.
+        if (crossesInternalBeatBoundary(currentStartPos, currentBeatPos, beatsPerBar)) {
+            return true;
+        }
 
         // 4/4: keep two-beat grouping by preventing beams over beat 2|3.
         const halfBarBoundary = beatsPerBar / 2;
@@ -1895,13 +1987,7 @@
                 if (stringIndex === 0) {
                     console.log('BAR LINE: Resetting beat position from', currentBeatPosition, 'to 0');
                     if (beamGroup.length > 0) {
-                        if (beamGroup.length >= 2) {
-                            const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                            currentBarElements.push(...beamedElements);
-                        } else {
-                            const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                            if (element) currentBarElements.push(element);
-                        }
+                        currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                         beamGroup = [];
                         beamGroupRhythms = [];
                     }
@@ -1996,13 +2082,7 @@
                 if (stringIndex === 0 && token.pauses && token.pauses.length > 0) {
                     // Finalize any pending beaming groups before rendering pauses
                     if (beamGroup.length > 0) {
-                        if (beamGroup.length >= 2) {
-                            const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                            currentBarElements.push(...beamedElements);
-                        } else {
-                            const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                            if (element) currentBarElements.push(element);
-                        }
+                        currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                         beamGroup = [];
                         beamGroupRhythms = [];
                     }
@@ -2072,13 +2152,7 @@
                     if (isTriplet(token.rhythm)) {
                         // Finalize any pending beaming group before triplet
                         if (beamGroup.length > 0) {
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
@@ -2114,13 +2188,7 @@
                         if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote, beatsPerBar)) {
                             // Finalize current group before starting new one
                             console.log('  -> BREAKING: Finalizing group of', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                             console.log('  -> Group cleared, starting new group');
@@ -2136,7 +2204,13 @@
                             currentBarDuration += noteDuration;
                         } else {
                             // Add to beam group
-                            beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+                            beamGroup.push({
+                                x: x,
+                                rhythm: token.rhythm,
+                                hasDot: hasDot,
+                                startBeat: currentBeatPosition,
+                                endBeat: beatPosAfterNote
+                            });
                             beamGroupRhythms.push(token.rhythm);
                             console.log('  -> Added', token.rhythm, ', group now has', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
 
@@ -2149,13 +2223,7 @@
                     else {
                         // Finalize any pending beaming group
                         if (beamGroup.length > 0) {
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
@@ -2282,13 +2350,7 @@
                     if (isTriplet(token.rhythm)) {
                         // Finalize any pending beaming group before triplet
                         if (beamGroup.length > 0) {
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
@@ -2321,13 +2383,7 @@
                         // Check if we should break the beam based on beat position
                         if (beamGroup.length > 0 && shouldBreakBeam(beamGroupRhythms, token.rhythm, beatPosAfterNote, beatsPerBar)) {
                             // Finalize current group before starting new one
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
@@ -2339,7 +2395,13 @@
                             currentBeatPosition = beatPosAfterNote;
                             currentBarDuration += noteDuration;
                         } else {
-                            beamGroup.push({x: rhythmRenderX, rhythm: token.rhythm, hasDot: hasDot});
+                            beamGroup.push({
+                                x: rhythmRenderX,
+                                rhythm: token.rhythm,
+                                hasDot: hasDot,
+                                startBeat: currentBeatPosition,
+                                endBeat: beatPosAfterNote
+                            });
                             beamGroupRhythms.push(token.rhythm);
 
                             // Update beat position and bar duration
@@ -2351,13 +2413,7 @@
                     else {
                         // Finalize any pending beaming group
                         if (beamGroup.length > 0) {
-                            if (beamGroup.length >= 2) {
-                                const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                                currentBarElements.push(...beamedElements);
-                            } else {
-                                const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                                if (element) currentBarElements.push(element);
-                            }
+                            currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
                             beamGroup = [];
                             beamGroupRhythms = [];
                         }
@@ -2380,13 +2436,7 @@
         // Finalize any remaining beaming groups at the end
         if (stringIndex === 0) {
             if (beamGroup.length > 0) {
-                if (beamGroup.length >= 2) {
-                    const beamedElements = renderBeamedNotes(svg, beamGroup, 'mixed');
-                    currentBarElements.push(...beamedElements);
-                } else {
-                    const element = renderRhythmStem(svg, beamGroup[0].x, beamGroup[0].rhythm, false, false, null, false);
-                    if (element) currentBarElements.push(element);
-                }
+                currentBarElements.push(...finalizeBeamGroup(svg, beamGroup, beatsPerBar));
             }
             beamGroupInterruptedByRest = false;
 
