@@ -1873,6 +1873,7 @@
         // Track unified beaming group for eighth/sixteenth/32nd notes
         let beamGroup = [];
         let beamGroupRhythms = [];
+        let beamGroupInterruptedByRest = false;
 
         // Track beat position within current bar (resets at each bar line)
         let currentBeatPosition = 0;
@@ -1904,6 +1905,7 @@
                         beamGroup = [];
                         beamGroupRhythms = [];
                     }
+                    beamGroupInterruptedByRest = false;
 
                     // Validate bar duration and color elements red if invalid
                     // Use epsilon for floating point comparison (triplets create fractions)
@@ -2004,6 +2006,7 @@
                         beamGroup = [];
                         beamGroupRhythms = [];
                     }
+                    beamGroupInterruptedByRest = true;
 
                     const pauseSpacing = width / token.pauses.length;
 
@@ -2123,14 +2126,24 @@
                             console.log('  -> Group cleared, starting new group');
                         }
 
-                        // Add to beam group
-                        beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
-                        beamGroupRhythms.push(token.rhythm);
-                        console.log('  -> Added', token.rhythm, ', group now has', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
+                        // A rest or bar line breaks the beaming continuity. The first note after that
+                        // interruption should stand alone and start a fresh beam group afterward.
+                        if (beamGroupInterruptedByRest && beamGroup.length === 0) {
+                            const noteElement = renderRhythmStem(svg, x, token.rhythm, false, false, null, false);
+                            if (noteElement) currentBarElements.push(noteElement);
+                            beamGroupInterruptedByRest = false;
+                            currentBeatPosition = beatPosAfterNote;
+                            currentBarDuration += noteDuration;
+                        } else {
+                            // Add to beam group
+                            beamGroup.push({x: x, rhythm: token.rhythm, hasDot: hasDot});
+                            beamGroupRhythms.push(token.rhythm);
+                            console.log('  -> Added', token.rhythm, ', group now has', beamGroupRhythms.length, 'notes:', beamGroupRhythms);
 
-                        // Update beat position and bar duration
-                        currentBeatPosition = beatPosAfterNote;
-                        currentBarDuration += noteDuration;
+                            // Update beat position and bar duration
+                            currentBeatPosition = beatPosAfterNote;
+                            currentBarDuration += noteDuration;
+                        }
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
@@ -2319,12 +2332,20 @@
                             beamGroupRhythms = [];
                         }
 
-                        beamGroup.push({x: rhythmRenderX, rhythm: token.rhythm, hasDot: hasDot});
-                        beamGroupRhythms.push(token.rhythm);
+                        if (beamGroupInterruptedByRest && beamGroup.length === 0) {
+                            const noteElement = renderRhythmStem(svg, rhythmRenderX, token.rhythm, false, false, null, false);
+                            if (noteElement) currentBarElements.push(noteElement);
+                            beamGroupInterruptedByRest = false;
+                            currentBeatPosition = beatPosAfterNote;
+                            currentBarDuration += noteDuration;
+                        } else {
+                            beamGroup.push({x: rhythmRenderX, rhythm: token.rhythm, hasDot: hasDot});
+                            beamGroupRhythms.push(token.rhythm);
 
-                        // Update beat position and bar duration
-                        currentBeatPosition = beatPosAfterNote;
-                        currentBarDuration += noteDuration;
+                            // Update beat position and bar duration
+                            currentBeatPosition = beatPosAfterNote;
+                            currentBarDuration += noteDuration;
+                        }
                     }
                     // Other note types - finalize beaming groups and render normally
                     else {
@@ -2367,6 +2388,7 @@
                     if (element) currentBarElements.push(element);
                 }
             }
+            beamGroupInterruptedByRest = false;
 
             // Validate final bar if it has any elements
             // Use epsilon for floating point comparison (triplets create fractions)
