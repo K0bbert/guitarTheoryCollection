@@ -15,6 +15,48 @@ In order to find a characteristic two-chord progression for any mode, do the fol
 - Take 4th & 5th chord of relative major scale + root of original scale in bass.
   - This results in 2 major chords with the original scale root as bass note, allowing to capture the sound of the mode when improvising over this vamp.
 
+
+**Example detailing the individual characteristic of every mode:**
+
+The example is written in E as it is easy with a 6 string guitar to use the open E as drone/ bass tone for staying in key.
+Every church mode in E is built around an E major, E minor, or E diminished triad, with one specific characteristic note giving each mode its unique color.
+Adding that characteristic note to the base triad creates a single "modal chord" that captures the mood of the scale.
+
+| **Mode/Scale Degree**       | **Base triad** | **Characteristic Note**                 | **Distinguishing Feature** | **Signature Chord** | **Chord tones**  | **Alternative**                  |
+|-----------------------------|----------------|-----------------------------------------|----------------------------|---------------------|------------------|----------------------------------|
+| **Ionian (Major)**          | E Maj7         | D# (Major 7th)/ [A (Natural 4)]         | Major 3rd                  | Emaj7               | E, G#, B, D#     | E Maj9/ Eadd9: E, G#, B, F#      |
+| **Dorian**                  | E min7         | C# (Major 6th)/ [Natural 6/ 13]         | Minor 3rd                  | Em6                 | E, G, B, C#      | Em13/ Em6/9: E, G, B, D, C#      |
+| **Phrygian**                | E min7         | F (Minor 2nd / b9)/ [b2/ b9]            | Minor 3rd                  | Em7b9               | E, G, B, D, F    | Esus4(b9): E, B, D, F, A         |
+| **Lydian**                  | E Maj7         | A# (Augmented 4th / #11)/ [#4/ #11]     | Major 3rd                  | Emaj7#11            | E, G#, B, D#, A# | F#/E: E, G#, D#, A#              |
+| **Mixolydian**              | E7             | D (Minor 7th) / [A (Natural 4/ 11)]     | Major 3rd                  | E7                  | E, G#, B, D      | E9sus4/ D/E: E, A, B, D, F#      |
+| **Aeolian (Natural Minor)** | E min7         | C (Minor 6th / b13)/ [b6/ b13]          | Minor 3rd                  | Emb6 (or Em7b13)    | E, G, B, C       | Em7(b13)/ Cmaj7/E: E, G, B, D, C |
+| **Locrian**                 | Em7b5          | Bb (Diminished 5th)/ [Bb & F (b5 & b2)] | Minor 3rd                  | Em7b5               | E, G, Bb, D      | Em7b5(b9)/ Fmaj7/E: E, G, D, F   |
+
+**Parallel shifts/ mediants for mode changes:**
+
+Shift chords/ melody by a third.
+A chromatic mediant shares the exact same chord quality (major-to-major or minor-to-minor) as the starting chord, has a root a major or minor third away, and connects through one common tone.
+
+For example:
+Melody/ progression is in Cmin --> Shift the whole melody by a minor third to Ebm or Amin
+Cm and Ebm are chromatic mediants, meaning their roots are a minor third apart and both chords share the same minor quality. Similarly, Amin would be the lower chromatic mediant (chromatic submediant).
+While they do not belong to the same traditional major or minor key, they connect smoothly through a single shared note and dramatic voice leading, giving them a cinematic, mysterious sound.
+
+A chord actually has four chromatic mediants in total—two moving up a third (mediants) and two moving down a third (submediants). Because Cm is minor, all of its chromatic mediants are also minor chords.
+
+| **Direction & Interval** | **Chord** | **Chord Tones** | **Shared Note with Cm** |
+|--------------------------|-----------|-----------------|-------------------------|
+| **Up a Minor 3rd**       | Ebm       | Eb, Gb, Bb      | Eb                      |
+| **Down a Minor 3rd**     | Am        | A, C, E         | C                       |
+| **Up a Major 3rd**       | Em        | E, G, B         | G                       |
+| **Down a Major 3rd**     | Abm       | Ab, Cb (B), Eb  | Eb                      |
+
+when the base chord is major, all four chromatic mediants are also major chords.
+
+Take as example a chord progression: Cm to Em.
+Switching from a C minor scale to an E minor scale is the most direct and effective way to solo over this progression. However, as the Cm/ Em chords do not define/ contain the 6th degree of the scale, playing C dorian or E dorian over the respective chord is also a good option, depending on the preferred flavor.
+
+
 ### Root note dictates modes (e.g. A Ionian/ A Dorian/ ...)
 ```fretboard-grid
 {
