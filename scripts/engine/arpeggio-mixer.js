@@ -131,6 +131,7 @@
                             if (indexToRemove !== -1) selectedShapes.splice(indexToRemove, 1);
                         }
                         updateComparisonStatus();
+                        updateComparison();
                     });
                 }
             });
@@ -204,17 +205,22 @@
         const status = document.getElementById('arpeggio-mixer-status');
         if (!status) return;
         if (selectedShapes.length === 0) status.textContent = 'Select two arpeggio shapes.';
-        else if (selectedShapes.length === 1) status.textContent = `Selected: ${selectedShapes[0].name}. Select one more.`;
+        else if (selectedShapes.length === 1) status.textContent = `Ready: ${selectedShapes[0].name} at both selected roots.`;
         else status.textContent = `Ready: ${selectedShapes[0].name} and ${selectedShapes[1].name}`;
     }
 
     function createComparisonConfig() {
-        if (selectedShapes.length !== 2) return null;
+        if (selectedShapes.length === 0) return null;
+
+        const firstShape = selectedShapes[0];
+        const secondShape = selectedShapes.length === 2
+            ? selectedShapes[1]
+            : firstShape;
 
         const root1 = getSelectedRoot();
         const root2 = getSecondRoot();
-        const pitchClasses1 = getShapePitchClasses(selectedShapes[0]).map(interval => (getPitchClass(root1) + interval) % 12);
-        const pitchClasses2 = getShapePitchClasses(selectedShapes[1]).map(interval => (getPitchClass(root2) + interval) % 12);
+        const pitchClasses1 = getShapePitchClasses(firstShape).map(interval => (getPitchClass(root1) + interval) % 12);
+        const pitchClasses2 = getShapePitchClasses(secondShape).map(interval => (getPitchClass(root2) + interval) % 12);
 
         const uniquePc = {
             pc1: [...new Set(pitchClasses1)],
@@ -257,8 +263,8 @@
             });
         }
 
-        transposeShape(selectedShapes[0], rootOffset1, 'blue', '1');
-        transposeShape(selectedShapes[1], rootOffset2, 'red', '2');
+        transposeShape(firstShape, rootOffset1, 'blue', '1');
+        transposeShape(secondShape, rootOffset2, 'red', '2');
 
         const deduplicatedNotes = new Map();
         notes.forEach(note => {
@@ -278,7 +284,7 @@
             height: 350,
             notes: shapeNotes,
             transposable: false,
-            title: `${selectedShapes[0].name} (${root1}) vs ${selectedShapes[1].name} (${root2})`
+            title: `${firstShape.name} (${root1}) vs ${secondShape.name} (${root2})`
         };
     }
 
