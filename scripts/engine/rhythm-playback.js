@@ -55,6 +55,11 @@
         return !!(checkbox && checkbox.checked);
     }
 
+    function isNoteMetronomeEnabled() {
+        const checkbox = document.getElementById('toggle-tab-note-metronome');
+        return !checkbox || checkbox.checked;
+    }
+
     function parseTimeSignature(timeText) {
         if (typeof timeText !== 'string' || !timeText.trim()) {
             return DEFAULT_TIME_SIGNATURE;
@@ -465,7 +470,7 @@
                 const isStrongBeat = (beat % beatsPerBar === 0);
 
                 // Create and schedule metronome click
-                if (!isNotePlaybackEnabled()) {
+                if (!isNotePlaybackEnabled() || isNoteMetronomeEnabled()) {
                     scheduleMetronomeClick(isStrongBeat, beatTime);
                 }
             }
@@ -1362,7 +1367,8 @@
         initAudioContext,
         getTabFretEvents,
         extractPlaybackFrets,
-        isNotePlaybackEnabled
+        isNotePlaybackEnabled,
+        isNoteMetronomeEnabled
     };
 
     /**
