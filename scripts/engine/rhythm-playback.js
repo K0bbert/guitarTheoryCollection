@@ -50,6 +50,11 @@
     let globalKey = 'A';
     let globalTimeSignature = DEFAULT_TIME_SIGNATURE;
 
+    function isNotePlaybackEnabled() {
+        const checkbox = document.getElementById('toggle-tab-note-playback');
+        return !!(checkbox && checkbox.checked);
+    }
+
     function parseTimeSignature(timeText) {
         if (typeof timeText !== 'string' || !timeText.trim()) {
             return DEFAULT_TIME_SIGNATURE;
@@ -404,7 +409,7 @@
      * @param {Function} onStop - Callback when playback finishes
      * @param {Function} onBeat - Callback for each beat (for visual feedback)
      */
-    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, countInOnce, onStop, onBeat, timeSignature) {
+    function playRhythmSequence(rhythmSequence, bpm, loop, countIn, countInOnce, onStop, onBeat, timeSignature, fretEvents) {
         const ctx = initAudioContext();
         if (!ctx) {
             console.error('Failed to initialize audio context');
@@ -460,10 +465,13 @@
                 const isStrongBeat = (beat % beatsPerBar === 0);
 
                 // Create and schedule metronome click
-                scheduleMetronomeClick(isStrongBeat, beatTime);
+                if (!isNotePlaybackEnabled()) {
+                    scheduleMetronomeClick(isStrongBeat, beatTime);
+                }
             }
 
             // Schedule note beeps based on rhythm
+            let fretEventIndex = 0;
             rhythmSequence.forEach((item, index) => {
                 const noteTime = rhythmStartTime + (currentBeat * secondsPerBeat);
 
@@ -482,8 +490,20 @@
                 if (!item.isPause && !item.suppressAttack) {
                     const sustainBeats = item.duration + (item.tieSustainExtraBeats || 0);
                     const sustainSeconds = sustainBeats * secondsPerBeat;
-                    scheduleNoteBeep(noteTime, sustainSeconds);
+                    const fretEvent = Array.isArray(fretEvents) ? fretEvents[fretEventIndex] : null;
+                    if (isNotePlaybackEnabled() && fretEvent) {
+                        if (Array.isArray(fretEvent.midiNotes) && fretEvent.midiNotes.length > 0) {
+                            scheduleChord(fretEvent.midiNotes, noteTime, sustainSeconds);
+                        }
+                        if (fretEvent.mutedCount > 0) {
+                            scheduleMutedPercussion(fretEvent.mutedCount, noteTime);
+                        }
+                    } else if (!isNotePlaybackEnabled()) {
+                        scheduleNoteBeep(noteTime, sustainSeconds);
+                    }
                 }
+
+                if (!item.isPause) fretEventIndex++;
 
                 currentBeat += item.duration;
             });
@@ -595,6 +615,77 @@
             scheduledNodes.push(oscillator);
         }
 
+        function midiToFrequency(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        function scheduleChord(midiNotes, time, sustainSeconds) {
+            if (!ctx || !isRunning || !Array.isArray(midiNotes) || midiNotes.length === 0) return;
+
+            const uniqueNotes = [...new Set(midiNotes)];
+            const volumePerNote = 0.28 / Math.sqrt(uniqueNotes.length);
+            const safeSustain = Math.max(DURATIONS.noteBeep, sustainSeconds || DURATIONS.noteBeep);
+
+            uniqueNotes.forEach(midi => {
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                const frequency = midiToFrequency(midi);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'triangle';
+
+                gainNode.gain.setValueAtTime(0, time);
+                gainNode.gain.linearRampToValueAtTime(volumePerNote, time + 0.008);
+                gainNode.gain.setValueAtTime(volumePerNote, time + Math.max(0.01, safeSustain - 0.03));
+                gainNode.gain.linearRampToValueAtTime(0, time + safeSustain);
+
+                oscillator.start(time);
+                oscillator.stop(time + safeSustain);
+                scheduledNodes.push(oscillator);
+            });
+        }
+
+        function scheduleMutedPercussion(mutedCount, time) {
+            if (!ctx || !isRunning || mutedCount <= 0) return;
+
+            const volume = Math.min(0.58, 0.32 * Math.sqrt(mutedCount));
+            const thump = ctx.createOscillator();
+            const thumpGain = ctx.createGain();
+
+            thump.type = 'triangle';
+            thump.frequency.setValueAtTime(180, time);
+            thump.frequency.exponentialRampToValueAtTime(58, time + 0.075);
+            thumpGain.gain.setValueAtTime(volume, time);
+            thumpGain.gain.exponentialRampToValueAtTime(0.01, time + 0.09);
+
+            thump.connect(thumpGain);
+            thumpGain.connect(ctx.destination);
+            thump.start(time);
+            thump.stop(time + 0.095);
+            scheduledNodes.push(thump);
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = getCachedNoiseBuffer(ctx);
+
+            const lowpass = ctx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 650;
+            lowpass.Q.value = 0.7;
+
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(Math.min(0.34, 0.11 * Math.sqrt(mutedCount)), time);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.035);
+
+            noise.connect(lowpass);
+            lowpass.connect(noiseGain);
+            noiseGain.connect(ctx.destination);
+            noise.start(time);
+            noise.stop(time + 0.038);
+            scheduledNodes.push(noise);
+        }
+
         // Schedule the first playthrough
         const initialScheduleTime = ctx.currentTime + 0.1;
         const firstIteration = schedulePlaythrough(initialScheduleTime, countIn);
@@ -647,6 +738,69 @@
             },
             duration: totalDuration
         };
+    }
+
+    function getTabFretEvents(container) {
+        const tabData = container && container._tabulatureData;
+        if (!tabData || !Array.isArray(tabData.sections)) return [];
+
+        const standardOpenMidis = [64, 59, 55, 50, 45, 40];
+        const standardOpenPitchClasses = [4, 11, 7, 2, 9, 4];
+        const pitchClasses = {
+            'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+            'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+            'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+        };
+        const fretEvents = [];
+
+        tabData.sections.forEach(section => {
+            if (!section || !Array.isArray(section.tokenLines)) return;
+            const maxTokens = Math.max(...section.tokenLines.map(line => line.length), 0);
+
+            for (let tokenIndex = 0; tokenIndex < maxTokens; tokenIndex++) {
+                const midiNotes = [];
+                let mutedCount = 0;
+                let hasFrets = false;
+                let hasContentColumn = false;
+
+                section.tokenLines.forEach((line, stringIndex) => {
+                    const token = line[tokenIndex];
+                    if (!token || token.type !== 'content') return;
+                    hasContentColumn = true;
+
+                    const tokenValue = String(token.value).trim();
+                    if (/^[xX]+$/.test(tokenValue)) {
+                        mutedCount++;
+                        return;
+                    }
+
+                    const match = tokenValue.match(/^(\d+)/);
+                    if (!match) return;
+
+                    const fret = parseInt(match[1], 10);
+                    if (!Number.isFinite(fret)) return;
+
+                    hasFrets = true;
+                    let openMidi = standardOpenMidis[stringIndex];
+                    const tuningName = tabData.tuning ? tabData.tuning[stringIndex] : null;
+                    if (tuningName && pitchClasses[tuningName] !== undefined) {
+                        openMidi = standardOpenMidis[stringIndex]
+                            - standardOpenPitchClasses[stringIndex]
+                            + pitchClasses[tuningName];
+                    }
+                    midiNotes.push(openMidi + fret);
+                });
+
+                if (hasContentColumn) {
+                    fretEvents.push({
+                        midiNotes,
+                        mutedCount
+                    });
+                }
+            }
+        });
+
+        return fretEvents;
     }
 
     /**
@@ -898,7 +1052,8 @@
                     currentPlayback = null;
                 },
                 null,
-                timeSignature
+                timeSignature,
+                getTabFretEvents(container)
             );
 
             // Show progress bar AFTER playback is started
@@ -1192,7 +1347,9 @@
         initializePlaybackControls,
         createPlaybackControls,
         playRhythmSequence,
-        initAudioContext
+        initAudioContext,
+        getTabFretEvents,
+        isNotePlaybackEnabled
     };
 
     /**
