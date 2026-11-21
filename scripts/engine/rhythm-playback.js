@@ -740,6 +740,21 @@
         };
     }
 
+    function extractPlaybackFrets(tokenValue) {
+        if (typeof tokenValue !== 'string') return [];
+
+        const normalized = tokenValue.trim();
+        if (!normalized || /^[xX]+$/.test(normalized)) return [];
+
+        const frets = [];
+        const fretMatches = normalized.matchAll(/\((\d+)\)|(\d+)/g);
+        for (const match of fretMatches) {
+            const fret = parseInt(match[1] || match[2], 10);
+            if (Number.isFinite(fret)) frets.push(fret);
+        }
+        return [...new Set(frets)];
+    }
+
     function getTabFretEvents(container) {
         const tabData = container && container._tabulatureData;
         if (!tabData || !Array.isArray(tabData.sections)) return [];
@@ -774,24 +789,21 @@
                         return;
                     }
 
-                    const match = tokenValue.match(/^(\d+)/);
-                    if (!match) return;
-
-                    const fret = parseInt(match[1], 10);
-                    if (!Number.isFinite(fret)) return;
-
-                    hasFrets = true;
-                    let openMidi = standardOpenMidis[stringIndex];
-                    const tuningName = tabData.tuning ? tabData.tuning[stringIndex] : null;
-                    if (tuningName && pitchClasses[tuningName] !== undefined) {
-                        openMidi = standardOpenMidis[stringIndex]
-                            - standardOpenPitchClasses[stringIndex]
-                            + pitchClasses[tuningName];
+                    const playbackFrets = extractPlaybackFrets(tokenValue);
+                    for (const fret of playbackFrets) {
+                        hasFrets = true;
+                        let openMidi = standardOpenMidis[stringIndex];
+                        const tuningName = tabData.tuning ? tabData.tuning[stringIndex] : null;
+                        if (tuningName && pitchClasses[tuningName] !== undefined) {
+                            openMidi = standardOpenMidis[stringIndex]
+                                - standardOpenPitchClasses[stringIndex]
+                                + pitchClasses[tuningName];
+                        }
+                        midiNotes.push(openMidi + fret);
                     }
-                    midiNotes.push(openMidi + fret);
                 });
 
-                if (hasContentColumn) {
+                if (midiNotes.length > 0 || mutedCount > 0) {
                     fretEvents.push({
                         midiNotes,
                         mutedCount
@@ -1349,6 +1361,7 @@
         playRhythmSequence,
         initAudioContext,
         getTabFretEvents,
+        extractPlaybackFrets,
         isNotePlaybackEnabled
     };
 
