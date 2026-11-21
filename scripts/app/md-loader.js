@@ -53,7 +53,8 @@
 
         const loadPromise = (async () => {
             try {
-                const resp = await fetch(path);
+                const separator = path.includes('?') ? '&' : '?';
+                const resp = await fetch(`${path}${separator}v=${Date.now()}`);
                 if (!resp.ok) return;
                 const text = await resp.text();
                 node.innerHTML = toHtml(text);
@@ -90,6 +91,22 @@
                     }
                 }, 100);
             } catch (e) { console.error('Mode transformer initialization failed:', e); }
+        }
+
+        if (window.KeyMixer && fileName === 'modes.md') {
+            try {
+                setTimeout(() => {
+                    window.KeyMixer.initKeyMixer();
+                }, 150);
+            } catch (e) { console.error('Key mixer initialization failed:', e); }
+        }
+
+        if (window.ArpeggioMixer && fileName === 'arpeggios.md') {
+            try {
+                setTimeout(() => {
+                    window.ArpeggioMixer.initArpeggioMixer();
+                }, 150);
+            } catch (e) { console.error('Arpeggio mixer initialization failed:', e); }
         }
 
         if (window.HarmonicMinorModeTransformer && fileName === 'harmonic-minor-modes.md') {

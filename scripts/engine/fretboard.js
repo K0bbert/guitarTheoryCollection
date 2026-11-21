@@ -147,6 +147,11 @@ class Fretboard {
          * On initial page load, no octave shifting is applied.
          * Once a transpose has occurred, octave shifting is always applied (even when returning to A).
          */
+        if (!this.transposable) {
+            this.octaveShift = 0;
+            return notesArray;
+        }
+
         if (!notesArray) {
             this.octaveShift = 0;
             return notesArray;

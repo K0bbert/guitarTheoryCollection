@@ -316,6 +316,7 @@
 
         // Create dropdown
         const select = document.createElement('select');
+        select.id = `${gridId}-mode-select`;
         select.style.cssText = 'padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-size: 14px;';
 
         // Add mode options
@@ -336,6 +337,7 @@
             console.log(`[ModeTransformer] Original config:`, originalGridConfig);
             try {
                 updateGridWithMode(gridId, this.value, originalGridConfig);
+                createChurchModeChordOutput(select, chordOutput);
             } catch (e) {
                 console.error(`[ModeTransformer] Error in updateGridWithMode:`, e);
             }
@@ -343,6 +345,15 @@
 
         label.appendChild(select);
         selectorDiv.appendChild(label);
+
+        const chordOutput = document.createElement('div');
+        chordOutput.className = 'church-mode-chord-output';
+        chordOutput.style.cssText = 'margin-top:12px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:4px;font-weight:600;';
+        selectorDiv.appendChild(chordOutput);
+        createChurchModeChordOutput(select, chordOutput);
+        document.getElementById('root-note-select')?.addEventListener('change', () => {
+            createChurchModeChordOutput(select, chordOutput);
+        });
 
         // Insert at the beginning of the container
         container.insertBefore(selectorDiv, container.firstChild);
@@ -362,6 +373,46 @@
         } else {
             addModeSelector(gridId, gridConfig);
         }
+    }
+
+    function getRootNameAndPitch() {
+        const rootSelect = document.getElementById('root-note-select');
+        const displayNames = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'];
+        const pitchByIndex = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        const index = rootSelect ? parseInt(rootSelect.value) : 5;
+        return { pitch: pitchByIndex[index] ?? 5, name: displayNames[index] || 'A' };
+    }
+
+    function createChurchModeChordOutput(select, output) {
+        const root = getRootNameAndPitch();
+        const modeNames = ['Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian'];
+        const modeIndex = modeNames.indexOf(select.value);
+        const basePatterns = ['major', 'minor', 'minor', 'major', 'major', 'minor', 'dim'];
+        const patterns = basePatterns.map((_, index) => basePatterns[(index + modeIndex) % 7]);
+        const intervalNames = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'];
+        const flatNames = ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb'];
+        const rootIndex = root.pitch;
+        const flatModes = ['Dorian', 'Phrygian', 'Mixolydian', 'Aeolian', 'Locrian'];
+        const useFlats = [2, 4, 6, 8, 9, 11].includes(rootIndex) || flatModes.includes(select.value);
+        const names = useFlats ? flatNames : intervalNames;
+
+        const numericIntervals = {
+            Ionian: [0, 2, 4, 5, 7, 9, 11],
+            Dorian: [0, 2, 3, 5, 7, 9, 10],
+            Phrygian: [0, 1, 3, 5, 7, 8, 10],
+            Lydian: [0, 2, 4, 6, 7, 9, 11],
+            Mixolydian: [0, 2, 4, 5, 7, 9, 10],
+            Aeolian: [0, 2, 3, 5, 7, 8, 10],
+            Locrian: [0, 1, 3, 5, 6, 8, 10]
+        };
+        const chords = numericIntervals[select.value].map((interval, degree) => {
+            const chordRoot = names[(rootIndex + interval) % 12];
+            const quality = patterns[degree];
+            const suffix = quality === 'major' ? 'maj' : quality === 'minor' ? 'min' : 'dim';
+            return `${chordRoot}${suffix}`;
+        });
+
+        output.textContent = `${root.name} ${select.value} chords: ${chords.join('  |  ')}`;
     }
 
     // Expose functions to window

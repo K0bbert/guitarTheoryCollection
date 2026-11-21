@@ -1,4 +1,12 @@
 # Arpeggios
+## Compare Two Arpeggios
+
+Select up to two arpeggio shapes with the checkboxes below, then choose the second key in the controls beneath the comparison fretboard.
+The base root note uses the page **Root Note** selector. Blue is unique to the first arpeggio, red is unique to the second, and green is common to both.
+
+<div id="arpeggio-mixer-fretboard-container" style="margin: 15px 0; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px;">
+</div>
+
 ## 7/ m7/ m7b5
 ```fretboard-grid
 {

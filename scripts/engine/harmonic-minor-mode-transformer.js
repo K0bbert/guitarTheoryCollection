@@ -333,6 +333,7 @@
 
         // Create dropdown
         const select = document.createElement('select');
+        select.id = `${gridId}-mode-select`;
         select.style.cssText = 'padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-size: 14px;';
 
         // Add mode options
@@ -362,6 +363,7 @@
             console.log(`[HarmonicMinorModeTransformer] Original config:`, originalGridConfig);
             try {
                 updateGridWithHarmonicMinorMode(gridId, this.value, originalGridConfig);
+                createHarmonicMinorChordOutput(select, chordOutput);
             } catch (e) {
                 console.error(`[HarmonicMinorModeTransformer] Error in updateGridWithHarmonicMinorMode:`, e);
             }
@@ -369,6 +371,15 @@
 
         label.appendChild(select);
         selectorDiv.appendChild(label);
+
+        const chordOutput = document.createElement('div');
+        chordOutput.className = 'harmonic-minor-mode-chord-output';
+        chordOutput.style.cssText = 'margin-top:12px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:4px;font-weight:600;';
+        selectorDiv.appendChild(chordOutput);
+        createHarmonicMinorChordOutput(select, chordOutput);
+        document.getElementById('root-note-select')?.addEventListener('change', () => {
+            createHarmonicMinorChordOutput(select, chordOutput);
+        });
 
         // Insert at the beginning of the container
         container.insertBefore(selectorDiv, container.firstChild);
@@ -388,6 +399,57 @@
         } else {
             addHarmonicMinorModeSelector(gridId, gridConfig);
         }
+    }
+
+    function getHarmonicMinorRoot() {
+        const rootSelect = document.getElementById('root-note-select');
+        const index = rootSelect ? parseInt(rootSelect.value) : 5;
+        const sharpNames = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'];
+        const flatNames = ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb'];
+        const useFlats = [2, 4, 6, 9, 11].includes(index);
+        return {
+            pitch: index,
+            name: (useFlats ? flatNames : sharpNames)[index]
+        };
+    }
+
+    function createHarmonicMinorChordOutput(select, output) {
+        const root = getHarmonicMinorRoot();
+        const modes = [
+            'Harmonic Minor',
+            'Locrian ♮6',
+            'Ionian #5',
+            'Dorian #4',
+            'Phrygian Dominant',
+            'Lydian #2',
+            'Super Locrian'
+        ];
+        const modeIndex = modes.indexOf(select.value);
+        const basePatterns = ['minor', 'dim', 'aug', 'minor', 'major', 'major', 'dim'];
+        const patterns = basePatterns.map((_, index) => basePatterns[(index + modeIndex) % 7]);
+        const sharpNames = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#'];
+        const flatNames = ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb'];
+        const useFlats = [1, 2, 4, 6, 8, 9, 11].includes(root.pitch);
+        const names = useFlats ? flatNames : sharpNames;
+        const numericIntervals = {
+            'Harmonic Minor': [0, 2, 3, 5, 7, 8, 11],
+            'Locrian ♮6': [0, 1, 3, 5, 6, 9, 10],
+            'Ionian #5': [0, 2, 4, 5, 8, 9, 11],
+            'Dorian #4': [0, 2, 3, 6, 7, 9, 10],
+            'Phrygian Dominant': [0, 1, 4, 5, 7, 8, 10],
+            'Lydian #2': [0, 3, 4, 6, 7, 9, 11],
+            'Super Locrian': [0, 1, 3, 4, 6, 8, 10]
+        };
+        const intervals = numericIntervals[select.value];
+
+        const chords = intervals.map((interval, degree) => {
+            const chordRoot = names[(root.pitch + interval) % 12];
+            const quality = patterns[degree];
+            const suffix = quality === 'major' ? 'maj' : quality === 'minor' ? 'min' : quality === 'aug' ? 'aug' : 'dim';
+            return `${chordRoot}${suffix}`;
+        });
+
+        output.textContent = `${root.name} ${select.value} chords: ${chords.join('  |  ')}`;
     }
 
     // Expose functions to window

@@ -285,6 +285,19 @@ button.color:hover {
     border-radius: 2px;
 }
 
+.arpeggio-fretboard-grid {
+    --grid-cell-row-height: 270px;
+    grid-auto-rows: 270px;
+}
+
+.arpeggio-fretboard-grid .fretboard-item {
+    min-height: 270px;
+}
+
+.arpeggio-fretboard-grid .fretboard-item svg {
+    height: 250px;
+}
+
 .fretboard-label {
     margin-top: 6px;
     font-size: 13px;

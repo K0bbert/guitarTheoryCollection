@@ -363,3 +363,58 @@ Switching from a C minor scale to an E minor scale is the most direct and effect
 | **Mixolydian**              | Perfect Unison | Major 2nd | Major 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
 | **Aeolian (Natural Minor)** | Perfect Unison | Major 2nd | Minor 3rd | Perfect 4th   | Perfect 5th    | Minor 6th | Minor 7th |
 | **Locrian**                 | Perfect Unison | Minor 2nd | Minor 3rd | Perfect 4th   | Diminished 5th | Minor 6th | Minor 7th |
+
+
+### Mixing 2 keys
+
+**Musical Theory Behind Key Mixing:**
+
+When soloing over chord progressions that move between different keys or modes, understanding the relationship between the keys is crucial. By comparing two keys, you can:
+
+1. **Identify Common Tones** (shown in green): These create smooth transitions between keys and can be used as pivot points
+2. **Distinguish Unique Tones** (shown in blue and red): These are characteristic of each key and create tension/release when transitioning
+3. **Visualize Key Relationships**: See how different modes and roots interact across the fretboard
+
+**How to Use:**
+- **Blue notes**: Belong to your base key (select root note and mode from main controls)
+- **Red notes**: Belong to the second key (select via mixer dropdown)
+- **Green notes**: Common between both keys—these are perfect for smooth soloing transitions
+
+**Interactive Mixer:**
+
+<div id="key-mixer-controls" style="margin: 15px 0; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+  <div style="margin-bottom: 15px;">
+    <h4 style="margin: 0 0 10px 0; color: #333;">Key Mixer Configuration</h4>
+    <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
+      The base root uses the Root Note selected in the Fretboard Controls.
+      Choose the base mode, second mode, and second root beside the comparator below.
+    </p>
+  </div>
+</div>
+
+<div id="key-mixer-fretboard-container" style="margin: 15px 0; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px;">
+  <!-- Fretboard will be rendered here -->
+</div>
+
+**Example Analysis:**
+
+If your base key is **A Aeolian (A natural minor)**, the notes are: A, B, C, D, E, F, G
+
+If you compare with **B Ionian (B major)**, the notes are: B, C#, D#, E, F#, G#, A#
+
+Common notes (green): A, B, D, E
+Unique to A Aeolian (blue): C, F, G
+Unique to B Ionian (red): C#, D#, F#, G#, A#
+
+Notice that A Aeolian and B Ionian share fewer notes because they're a whole step apart. This creates more tension and dissonance, which can be used for dramatic effect in soloing.
+
+**Key Relationship Patterns:**
+
+| **Interval Between Roots** | **Common Notes** | **Use Case** |
+|---|---|---|
+| **Same root, different mode** | Most common (5-6 notes) | Smooth transitions, same tonal center |
+| **Minor 3rd apart** | Medium (4-5 notes) | Chromatic mediant transitions, smooth |
+| **Major 3rd apart** | Medium (4-5 notes) | Dramatic transitions, more tension |
+| **Whole step apart** | Fewer (2-3 notes) | Dissonant, needs resolution |
+| **Tritone apart** | Fewest (1-2 notes) | Maximum tension, symmetrical |
+
