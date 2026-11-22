@@ -223,6 +223,87 @@
           color: #666;
           font-size: 0.88rem;
         }
+        .tab-builder-tap {
+          margin-bottom: 12px;
+          background: #fffdf9;
+          border: 1px solid #dbd4c7;
+          border-radius: 12px;
+          padding: 10px;
+        }
+        .tab-builder-tap h3 {
+          margin: 0 0 8px;
+          font-size: 0.95rem;
+          color: #666;
+          letter-spacing: 0.02em;
+          text-transform: uppercase;
+        }
+        .tab-builder-tap-controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .tab-builder-tap-controls label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.92rem;
+        }
+        .tab-builder-tap-controls input,
+        .tab-builder-tap-controls select {
+          border: 1px solid #dbd4c7;
+          border-radius: 8px;
+          padding: 6px 8px;
+          background: #fff;
+        }
+        .tab-builder-tap-controls button {
+          border: 1px solid #dbd4c7;
+          border-radius: 8px;
+          background: white;
+          color: #222;
+          padding: 8px 12px;
+          cursor: pointer;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+        }
+        .tab-builder-tap-controls button.primary {
+          background: #0f766e;
+          border-color: #0f766e;
+          color: #fff;
+        }
+        .tab-builder-tap-controls button.danger {
+          border-color: #b91c1c;
+          color: #b91c1c;
+        }
+        .tab-builder-tap-pad {
+          border: 2px dashed #7ab8b1;
+          border-radius: 10px;
+          background: #f2fbf9;
+          color: #24524d;
+          min-height: 74px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          font-weight: 700;
+          user-select: none;
+          cursor: pointer;
+          padding: 10px;
+        }
+        .tab-builder-tap-pad.active {
+          background: #d9f0ee;
+          border-color: #0f766e;
+          color: #0f766e;
+        }
+        .tab-builder-tap-note {
+          margin-top: 8px;
+          color: #666;
+          font-size: 0.88rem;
+        }
         `;
 
         document.head.appendChild(style);
@@ -236,6 +317,30 @@
             <label>Time <input data-role="time" value="4/4"></label>
             <label>Key (optional) <input data-role="key" placeholder="e.g. Dmin"></label>
             <span class="tab-builder-status" data-role="status">No slice selected</span>
+          </div>
+
+          <div class="tab-builder-tap">
+            <h3>Tap Rhythm (Quantized)</h3>
+            <div class="tab-builder-tap-controls">
+              <label>BPM <input type="number" min="40" max="240" step="1" value="120" data-role="tap-bpm"></label>
+              <label>Time
+                <select data-role="tap-time">
+                  <option value="4/4" selected>4/4</option>
+                  <option value="3/4">3/4</option>
+                </select>
+              </label>
+              <label>Quantize
+                <select data-role="tap-quantize">
+                  <option value="sixteenth" selected>1/16</option>
+                  <option value="eighth">1/8</option>
+                </select>
+              </label>
+              <label><input type="checkbox" data-role="tap-metronome" checked> Metronome while tapping</label>
+              <button type="button" class="primary" data-action="tap-start">Start Capture</button>
+              <button type="button" class="danger" data-action="tap-stop">Stop & Apply</button>
+            </div>
+            <div class="tab-builder-tap-pad" data-role="tap-pad" tabindex="0">Press and hold here (or Space / Enter) while capture is running</div>
+            <div class="tab-builder-tap-note" data-role="tap-status">Ready. Capture writes rhythm to R row and puts muted "x" on low E for note events.</div>
           </div>
 
           <div class="tab-builder-toolbar">
@@ -300,12 +405,28 @@
         const timeInput = container.querySelector('[data-role="time"]');
         const keyInput = container.querySelector('[data-role="key"]');
         const importFileInput = container.querySelector('[data-role="import-file"]');
+        const tapBpmInput = container.querySelector('[data-role="tap-bpm"]');
+        const tapTimeSelect = container.querySelector('[data-role="tap-time"]');
+        const tapQuantizeSelect = container.querySelector('[data-role="tap-quantize"]');
+        const tapMetronomeCheckbox = container.querySelector('[data-role="tap-metronome"]');
+        const tapPad = container.querySelector('[data-role="tap-pad"]');
+        const tapStatus = container.querySelector('[data-role="tap-status"]');
 
         const state = {
             slices: [createEmptySlice()],
             selectedSlice: null,
             nonEmptySliceCount: 0,
             visualSlicesPerRow: 23
+        };
+
+        const tapCapture = {
+            isCapturing: false,
+            captureStartMs: 0,
+            activePressStartMs: null,
+            presses: [],
+            metronomeTimer: null,
+            metronomeBeat: 0,
+            keyHeld: false
         };
 
         function createEmptySlice() {
@@ -325,6 +446,293 @@
 
         function sanitizeToken(value) {
             return (value || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function getTapStepInBeats() {
+            const mode = tapQuantizeSelect ? tapQuantizeSelect.value : 'sixteenth';
+            return mode === 'eighth' ? 0.5 : 0.25;
+        }
+
+        function parseTapTimeSignature(value) {
+            const normalized = sanitizeToken(value).replace(/\s+/g, '');
+            return normalized === '3/4' ? '3/4' : '4/4';
+        }
+
+        function getBeatsPerBarFromTime(timeValue) {
+            return parseTapTimeSignature(timeValue) === '3/4' ? 3 : 4;
+        }
+
+        function getTapBpm() {
+            const value = tapBpmInput ? parseInt(tapBpmInput.value, 10) : 120;
+            return Math.max(40, Math.min(240, Number.isFinite(value) ? value : 120));
+        }
+
+        function getAudioContextForTap() {
+            if (window.RhythmPlayback && typeof window.RhythmPlayback.initAudioContext === 'function') {
+                return window.RhythmPlayback.initAudioContext();
+            }
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return null;
+            return new AudioCtx();
+        }
+
+        function playTapMetronomeClick(isStrongBeat) {
+            const ctx = getAudioContextForTap();
+            if (!ctx) return;
+
+            const time = ctx.currentTime;
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            oscillator.type = 'square';
+            oscillator.frequency.value = isStrongBeat ? 1500 : 900;
+
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(isStrongBeat ? 0.15 : 0.08, time + 0.002);
+            gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.045);
+
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start(time);
+            oscillator.stop(time + 0.05);
+        }
+
+        function setTapStatus(message) {
+            if (tapStatus) {
+                tapStatus.textContent = message;
+            }
+        }
+
+        function setTapPadActive(active) {
+            if (!tapPad) return;
+            tapPad.classList.toggle('active', !!active);
+        }
+
+        function startTapMetronome() {
+            stopTapMetronome();
+
+            if (!tapMetronomeCheckbox || !tapMetronomeCheckbox.checked) return;
+
+            const bpm = getTapBpm();
+            const beatsPerBar = getBeatsPerBarFromTime(tapTimeSelect ? tapTimeSelect.value : '4/4');
+            const intervalMs = (60 / bpm) * 1000;
+
+            tapCapture.metronomeBeat = 0;
+            playTapMetronomeClick(true);
+            tapCapture.metronomeBeat++;
+
+            tapCapture.metronomeTimer = setInterval(function () {
+                const isStrongBeat = (tapCapture.metronomeBeat % beatsPerBar) === 0;
+                playTapMetronomeClick(isStrongBeat);
+                tapCapture.metronomeBeat++;
+            }, intervalMs);
+        }
+
+        function stopTapMetronome() {
+            if (tapCapture.metronomeTimer) {
+                clearInterval(tapCapture.metronomeTimer);
+                tapCapture.metronomeTimer = null;
+            }
+        }
+
+        function normalizeDurationToRhythm(durationBeats, isPause) {
+            const candidates = [
+                { token: 'w.', pauseToken: 'wp.', beats: 6 },
+                { token: 'w', pauseToken: 'wp', beats: 4 },
+                { token: 'h.', pauseToken: 'hp.', beats: 3 },
+                { token: 'h', pauseToken: 'hp', beats: 2 },
+                { token: 'q.', pauseToken: 'qp.', beats: 1.5 },
+                { token: 'q', pauseToken: 'qp', beats: 1 },
+                { token: 'e.', pauseToken: 'ep.', beats: 0.75 },
+                { token: 'e', pauseToken: 'ep', beats: 0.5 },
+                { token: 's.', pauseToken: 'sp.', beats: 0.375 },
+                { token: 's', pauseToken: 'sp', beats: 0.25 },
+                { token: 'f', pauseToken: 'fp', beats: 0.125 }
+            ];
+
+            let best = candidates[0];
+            let bestDistance = Math.abs(durationBeats - best.beats);
+
+            for (let i = 1; i < candidates.length; i++) {
+                const distance = Math.abs(durationBeats - candidates[i].beats);
+                if (distance < bestDistance) {
+                    best = candidates[i];
+                    bestDistance = distance;
+                }
+            }
+
+            return {
+                token: isPause ? best.pauseToken : best.token,
+                beats: best.beats
+            };
+        }
+
+        function quantizeCapturedPresses() {
+            if (!tapCapture.presses.length) return [];
+
+            const bpm = getTapBpm();
+            const beatsPerSecond = bpm / 60;
+            const step = getTapStepInBeats();
+            const quantized = [];
+
+            tapCapture.presses
+                .slice()
+                .sort(function (a, b) { return a.startMs - b.startMs; })
+                .forEach(function (press) {
+                    const rawStart = (press.startMs - tapCapture.captureStartMs) * 0.001 * beatsPerSecond;
+                    const rawEnd = (press.endMs - tapCapture.captureStartMs) * 0.001 * beatsPerSecond;
+
+                    let qStart = Math.round(rawStart / step) * step;
+                    let qEnd = Math.round(rawEnd / step) * step;
+
+                    if (qStart < 0) qStart = 0;
+                    if (qEnd <= qStart) qEnd = qStart + step;
+
+                    quantized.push({
+                        start: qStart,
+                        end: qEnd
+                    });
+                });
+
+            const normalized = [];
+            let previousEnd = 0;
+
+            quantized.forEach(function (item) {
+                let start = item.start;
+                let end = item.end;
+                if (start < previousEnd) {
+                    start = previousEnd;
+                }
+                if (end <= start) {
+                    end = start + step;
+                }
+                normalized.push({ start: start, end: end });
+                previousEnd = end;
+            });
+
+            return normalized;
+        }
+
+        function buildRhythmFromTapPresses(quantizedPresses) {
+            if (!Array.isArray(quantizedPresses) || quantizedPresses.length === 0) return [];
+
+            const rhythmEvents = [];
+            let cursorBeat = 0;
+
+            quantizedPresses.forEach(function (press) {
+                const restBeats = press.start - cursorBeat;
+                if (restBeats > 0.001) {
+                    const pauseRhythm = normalizeDurationToRhythm(restBeats, true);
+                    rhythmEvents.push({
+                        token: pauseRhythm.token,
+                        beats: pauseRhythm.beats,
+                        isPause: true
+                    });
+                }
+
+                const noteBeats = Math.max(0.125, press.end - press.start);
+                const noteRhythm = normalizeDurationToRhythm(noteBeats, false);
+                rhythmEvents.push({
+                    token: noteRhythm.token,
+                    beats: noteRhythm.beats,
+                    isPause: false
+                });
+
+                cursorBeat = press.end;
+            });
+
+            return rhythmEvents;
+        }
+
+        function applyTapRhythmToBuilder(rhythmEvents) {
+            if (!Array.isArray(rhythmEvents) || rhythmEvents.length === 0) {
+                setTapStatus('No taps captured. Start capture and press/hold on the pad.');
+                return;
+            }
+
+            const beatsPerBar = getBeatsPerBarFromTime(tapTimeSelect ? tapTimeSelect.value : '4/4');
+            let beatInBar = 0;
+
+            const generated = rhythmEvents.map(function (event) {
+                const slice = createEmptySlice();
+                slice.rhythm = event.token;
+                if (!event.isPause) {
+                    slice.strings[5] = 'x';
+                }
+
+                beatInBar += event.beats;
+                if (beatInBar >= beatsPerBar - 0.001) {
+                    slice.barAfter = true;
+                    beatInBar -= beatsPerBar;
+                    if (Math.abs(beatInBar) < 0.001) {
+                        beatInBar = 0;
+                    }
+                }
+
+                return slice;
+            });
+
+            state.slices = generated.length > 0 ? generated : [createEmptySlice()];
+            if (tapTimeSelect && timeInput) {
+                timeInput.value = parseTapTimeSignature(tapTimeSelect.value);
+            }
+
+            recalculateNonEmptySliceCount();
+            ensureTrailingEmptySlice();
+            state.selectedSlice = 0;
+            render();
+            buildExportAndPreview();
+            setTapStatus('Applied ' + generated.length + ' rhythm slices. Replace low E "x" with your fretted notes.');
+        }
+
+        function beginPress(nowMs) {
+            if (!tapCapture.isCapturing) return;
+            if (tapCapture.activePressStartMs !== null) return;
+            tapCapture.activePressStartMs = nowMs;
+            setTapPadActive(true);
+        }
+
+        function endPress(nowMs) {
+            if (!tapCapture.isCapturing) return;
+            if (tapCapture.activePressStartMs === null) return;
+
+            const startMs = tapCapture.activePressStartMs;
+            tapCapture.activePressStartMs = null;
+            setTapPadActive(false);
+
+            if (nowMs <= startMs) return;
+            tapCapture.presses.push({
+                startMs: startMs,
+                endMs: nowMs
+            });
+            setTapStatus('Captured taps: ' + tapCapture.presses.length);
+        }
+
+        function startTapCapture() {
+            if (tapCapture.isCapturing) return;
+
+            tapCapture.isCapturing = true;
+            tapCapture.captureStartMs = performance.now();
+            tapCapture.activePressStartMs = null;
+            tapCapture.presses = [];
+            setTapStatus('Capturing... press/hold on the tap pad.');
+            startTapMetronome();
+        }
+
+        function stopTapCaptureAndApply() {
+            if (!tapCapture.isCapturing) return;
+
+            const nowMs = performance.now();
+            if (tapCapture.activePressStartMs !== null) {
+                endPress(nowMs);
+            }
+            tapCapture.isCapturing = false;
+            stopTapMetronome();
+            setTapPadActive(false);
+
+            const quantized = quantizeCapturedPresses();
+            const rhythmEvents = buildRhythmFromTapPresses(quantized);
+            applyTapRhythmToBuilder(rhythmEvents);
         }
 
         function escapeHtml(value) {
@@ -569,6 +977,9 @@
             }
             if (typeof parsed.time === 'string' && parsed.time.trim()) {
                 timeInput.value = parsed.time;
+                if (tapTimeSelect) {
+                    tapTimeSelect.value = parseTapTimeSignature(parsed.time);
+                }
             }
             if (typeof parsed.key === 'string') {
                 keyInput.value = parsed.key;
@@ -1229,10 +1640,74 @@
         container.querySelector('[data-action="copy-export"]').addEventListener('click', copyExport);
         container.querySelector('[data-action="import-tab"]').addEventListener('click', importTabFromSelectedFile);
         container.querySelector('[data-action="download-export"]').addEventListener('click', downloadExport);
+        const tapStartBtn = container.querySelector('[data-action="tap-start"]');
+        const tapStopBtn = container.querySelector('[data-action="tap-stop"]');
+        if (tapStartBtn) {
+            tapStartBtn.addEventListener('click', startTapCapture);
+        }
+        if (tapStopBtn) {
+            tapStopBtn.addEventListener('click', stopTapCaptureAndApply);
+        }
         if (importFileInput) {
             importFileInput.addEventListener('change', handleImportFileChange);
         }
+        if (tapPad) {
+            tapPad.addEventListener('pointerdown', function (event) {
+                event.preventDefault();
+                if (typeof tapPad.setPointerCapture === 'function') {
+                    tapPad.setPointerCapture(event.pointerId);
+                }
+                beginPress(performance.now());
+            });
+            tapPad.addEventListener('pointerup', function (event) {
+                event.preventDefault();
+                if (typeof tapPad.releasePointerCapture === 'function') {
+                    tapPad.releasePointerCapture(event.pointerId);
+                }
+                endPress(performance.now());
+            });
+            tapPad.addEventListener('pointercancel', function () {
+                endPress(performance.now());
+            });
+            tapPad.addEventListener('keydown', function (event) {
+                if (event.key !== ' ' && event.key !== 'Enter') return;
+                if (tapCapture.keyHeld) return;
+                tapCapture.keyHeld = true;
+                event.preventDefault();
+                beginPress(performance.now());
+            });
+            tapPad.addEventListener('keyup', function (event) {
+                if (event.key !== ' ' && event.key !== 'Enter') return;
+                tapCapture.keyHeld = false;
+                event.preventDefault();
+                endPress(performance.now());
+            });
+            tapPad.addEventListener('blur', function () {
+                tapCapture.keyHeld = false;
+                endPress(performance.now());
+            });
+        }
+        if (tapTimeSelect && timeInput) {
+            tapTimeSelect.value = parseTapTimeSignature(timeInput.value);
+            tapTimeSelect.addEventListener('change', function () {
+                timeInput.value = parseTapTimeSignature(tapTimeSelect.value);
+            });
+            timeInput.addEventListener('input', function () {
+                tapTimeSelect.value = parseTapTimeSignature(timeInput.value);
+            });
+        }
+        if (tapBpmInput) {
+            const globalMetronomeBpm = document.getElementById('metronome-bpm');
+            if (globalMetronomeBpm && globalMetronomeBpm.value) {
+                tapBpmInput.value = globalMetronomeBpm.value;
+            }
+        }
         container.querySelector('[data-action="clear-all"]').addEventListener('click', function () {
+            stopTapMetronome();
+            tapCapture.isCapturing = false;
+            tapCapture.activePressStartMs = null;
+            setTapPadActive(false);
+            setTapStatus('Ready. Capture writes rhythm to R row and puts muted "x" on low E for note events.');
             state.slices = [createEmptySlice()];
             state.nonEmptySliceCount = 0;
             state.selectedSlice = 0;
