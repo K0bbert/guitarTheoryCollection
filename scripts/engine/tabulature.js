@@ -389,7 +389,8 @@
 
     /**
      * Parse rhythm notation into rhythm events and tie markers.
-     * Tie markers are written using '>' between note symbols.
+     * Preferred tie-group notation is '> ... <' (start/end arrows).
+     * Legacy '> between notes' and '< ... >' remain supported for compatibility.
      */
     function parseRhythmNotation(rhythmLine) {
         if (!rhythmLine) {
@@ -398,6 +399,9 @@
 
         const rhythms = [];
         const tieMarkerPositions = [];
+        const tieGroupRanges = [];
+        const forwardTieStartStack = []; // '>' ... '<' (preferred)
+        const legacyTieStartStack = [];  // '<' ... '>' (backward compatibility)
         let i = 0;
         let barCount = 0;
 
@@ -411,7 +415,23 @@
             }
 
             if (char === '>') {
-                tieMarkerPositions.push(i);
+                if (legacyTieStartStack.length > 0) {
+                    const groupStart = legacyTieStartStack.pop();
+                    tieGroupRanges.push({ start: groupStart, end: i });
+                } else {
+                    forwardTieStartStack.push(i);
+                }
+                i++;
+                continue;
+            }
+
+            if (char === '<') {
+                if (forwardTieStartStack.length > 0) {
+                    const groupStart = forwardTieStartStack.pop();
+                    tieGroupRanges.push({ start: groupStart, end: i });
+                } else {
+                    legacyTieStartStack.push(i);
+                }
                 i++;
                 continue;
             }
@@ -429,12 +449,22 @@
             let symbol = char;
             let j = i + 1;
 
-            if (j < rhythmLine.length && rhythmLine[j] === 't') {
-                symbol += 't';
-                j++;
-            } else if (j < rhythmLine.length && rhythmLine[j] === 'p') {
-                symbol += 'p';
-                j++;
+            let sawTriplet = false;
+            let sawPause = false;
+            while (j < rhythmLine.length) {
+                if (rhythmLine[j] === 't' && !sawTriplet) {
+                    symbol += 't';
+                    sawTriplet = true;
+                    j++;
+                    continue;
+                }
+                if (rhythmLine[j] === 'p' && !sawPause) {
+                    symbol += 'p';
+                    sawPause = true;
+                    j++;
+                    continue;
+                }
+                break;
             }
 
             if (j < rhythmLine.length && rhythmLine[j] === '.') {
@@ -458,6 +488,11 @@
         const ties = [];
         const tieKeys = new Set();
 
+        // Backward compatibility: standalone '>' keeps old behavior (tie previous to next note).
+        while (forwardTieStartStack.length > 0) {
+            tieMarkerPositions.push(forwardTieStartStack.pop());
+        }
+
         tieMarkerPositions.forEach(markerPos => {
             let fromNoteIndex = -1;
             let toNoteIndex = -1;
@@ -477,6 +512,75 @@
             }
 
             if (fromNoteIndex >= 0 && toNoteIndex > fromNoteIndex) {
+                const key = `${fromNoteIndex}:${toNoteIndex}`;
+                if (!tieKeys.has(key)) {
+                    tieKeys.add(key);
+                    ties.push({ fromNoteIndex, toNoteIndex });
+                }
+            }
+        });
+
+        tieGroupRanges.forEach(range => {
+            if (!range || typeof range.start !== 'number' || typeof range.end !== 'number') {
+                return;
+            }
+            let sourceNoteIndex = -1;
+            let targetNoteIndex = -1;
+            const middleNoteIndices = [];
+
+            for (let idx = noteEvents.length - 1; idx >= 0; idx--) {
+                if (noteEvents[idx].position < range.start) {
+                    sourceNoteIndex = idx;
+                    break;
+                }
+            }
+
+            for (let idx = 0; idx < noteEvents.length; idx++) {
+                const pos = noteEvents[idx].position;
+                if (pos > range.start && pos < range.end) {
+                    middleNoteIndices.push(idx);
+                }
+                if (targetNoteIndex < 0 && pos > range.end) {
+                    targetNoteIndex = idx;
+                }
+            }
+
+            // Fallback when marker is placed before the first note in the tie-group.
+            if (sourceNoteIndex < 0) {
+                for (let idx = 0; idx < noteEvents.length; idx++) {
+                    if (noteEvents[idx].position > range.start) {
+                        sourceNoteIndex = idx;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback when marker is placed after the final note in the tie-group.
+            if (targetNoteIndex < 0) {
+                for (let idx = noteEvents.length - 1; idx >= 0; idx--) {
+                    if (noteEvents[idx].position < range.end) {
+                        targetNoteIndex = idx;
+                        break;
+                    }
+                }
+            }
+
+            const chain = [];
+            if (sourceNoteIndex >= 0) chain.push(sourceNoteIndex);
+            middleNoteIndices.forEach(idx => {
+                if (chain.length === 0 || chain[chain.length - 1] !== idx) {
+                    chain.push(idx);
+                }
+            });
+            if (targetNoteIndex >= 0 && (chain.length === 0 || chain[chain.length - 1] !== targetNoteIndex)) {
+                chain.push(targetNoteIndex);
+            }
+
+            for (let i = 0; i < chain.length - 1; i++) {
+                const fromNoteIndex = chain[i];
+                const toNoteIndex = chain[i + 1];
+                if (toNoteIndex <= fromNoteIndex) continue;
+
                 const key = `${fromNoteIndex}:${toNoteIndex}`;
                 if (!tieKeys.has(key)) {
                     tieKeys.add(key);
@@ -1659,7 +1763,7 @@
     function getBaseRhythm(rhythm) {
         if (!rhythm) return '';
         // Strip dots, triplet indicator, and pause indicator
-        return rhythm.replace('.', '').replace('t', '').replace('p', '');
+        return rhythm.replace(/[.tp]/g, '');
     }
 
     /**
@@ -1674,7 +1778,7 @@
      */
     function getTripletBaseValue(rhythm) {
         if (!isTriplet(rhythm)) return null;
-        return rhythm.replace('t', '').replace('.', '');
+        return getBaseRhythm(rhythm);
     }
 
     /**

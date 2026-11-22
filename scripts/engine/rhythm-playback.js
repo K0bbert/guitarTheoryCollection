@@ -235,7 +235,7 @@
         // Remove 'p' (pause) and 't' (triplet) to get base
         const base = rhythm.replace(/[pt.]/g, '');
         const hasDot = rhythm.includes('.');
-        const isTriplet = rhythm.includes('t') && !rhythm.includes('p'); // 't' but not 'tp'
+        const isTriplet = rhythm.includes('t');
 
         let duration = 0;
         switch(base) {
@@ -272,18 +272,18 @@
             return tieMap;
         }
 
-        const noteEventDurations = [];
-        rhythmSequence.forEach(item => {
+        const noteEventRhythmIndices = [];
+        rhythmSequence.forEach((item, rhythmIndex) => {
             if (!item.isPause) {
-                noteEventDurations.push(item.duration || 0);
+                noteEventRhythmIndices.push(rhythmIndex);
             }
         });
 
-        if (!Array.isArray(tieData) || tieData.length === 0 || noteEventDurations.length === 0) {
+        if (!Array.isArray(tieData) || tieData.length === 0 || noteEventRhythmIndices.length === 0) {
             return tieMap;
         }
 
-        const effectiveSourceByNoteIndex = noteEventDurations.map((_, idx) => idx);
+        const effectiveSourceByNoteIndex = noteEventRhythmIndices.map((_, idx) => idx);
 
         tieData.forEach(tie => {
             if (!tie || typeof tie.fromNoteIndex !== 'number' || typeof tie.toNoteIndex !== 'number') {
@@ -292,7 +292,7 @@
 
             const fromIdx = tie.fromNoteIndex;
             const toIdx = tie.toNoteIndex;
-            if (fromIdx < 0 || toIdx < 0 || fromIdx >= noteEventDurations.length || toIdx >= noteEventDurations.length) {
+            if (fromIdx < 0 || toIdx < 0 || fromIdx >= noteEventRhythmIndices.length || toIdx >= noteEventRhythmIndices.length) {
                 return;
             }
             if (toIdx <= fromIdx) {
@@ -300,13 +300,27 @@
             }
 
             const sourceIdx = effectiveSourceByNoteIndex[fromIdx];
-            const targetDuration = noteEventDurations[toIdx] || 0;
+            const fromRhythmIdx = noteEventRhythmIndices[fromIdx];
+            const toRhythmIdx = noteEventRhythmIndices[toIdx];
 
-            if (targetDuration > 0) {
+            if (toRhythmIdx <= fromRhythmIdx) {
+                return;
+            }
+
+            // Extend sustain by all rhythm duration between tied note attacks.
+            // This includes pause symbols between ties so long held notes do not
+            // cut out early before the final tied segment.
+            let sustainedBeats = 0;
+            for (let rhythmIdx = fromRhythmIdx + 1; rhythmIdx <= toRhythmIdx; rhythmIdx++) {
+                const item = rhythmSequence[rhythmIdx];
+                sustainedBeats += item ? (item.duration || 0) : 0;
+            }
+
+            if (sustainedBeats > 0) {
                 if (!Object.prototype.hasOwnProperty.call(tieMap.sustainExtraBeatsByNoteIndex, sourceIdx)) {
                     tieMap.sustainExtraBeatsByNoteIndex[sourceIdx] = 0;
                 }
-                tieMap.sustainExtraBeatsByNoteIndex[sourceIdx] += targetDuration;
+                tieMap.sustainExtraBeatsByNoteIndex[sourceIdx] += sustainedBeats;
             }
 
             tieMap.suppressAttackByNoteIndex.add(toIdx);

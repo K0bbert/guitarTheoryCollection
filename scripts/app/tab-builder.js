@@ -257,6 +257,10 @@
           padding: 6px 8px;
           background: #fff;
         }
+        .tab-builder-tap-controls input[type="range"] {
+          width: 120px;
+          padding: 0;
+        }
         .tab-builder-tap-controls button {
           border: 1px solid #dbd4c7;
           border-radius: 8px;
@@ -331,9 +335,16 @@
               </label>
               <label>Quantize
                 <select data-role="tap-quantize">
+                  <option value="quarter">1/4</option>
                   <option value="sixteenth" selected>1/16</option>
                   <option value="eighth">1/8</option>
+                  <option value="eighth_triplet">1/8T</option>
+                  <option value="sixteenth_triplet">1/16T</option>
                 </select>
+              </label>
+              <label>Humanize
+                <input type="range" min="0" max="100" step="1" value="0" data-role="tap-humanize">
+                <span data-role="tap-humanize-value">0%</span>
               </label>
               <label><input type="checkbox" data-role="tap-metronome" checked> Metronome while tapping</label>
               <button type="button" class="primary" data-action="tap-start">Start Capture</button>
@@ -408,6 +419,8 @@
         const tapBpmInput = container.querySelector('[data-role="tap-bpm"]');
         const tapTimeSelect = container.querySelector('[data-role="tap-time"]');
         const tapQuantizeSelect = container.querySelector('[data-role="tap-quantize"]');
+        const tapHumanizeSlider = container.querySelector('[data-role="tap-humanize"]');
+        const tapHumanizeValue = container.querySelector('[data-role="tap-humanize-value"]');
         const tapMetronomeCheckbox = container.querySelector('[data-role="tap-metronome"]');
         const tapPad = container.querySelector('[data-role="tap-pad"]');
         const tapStatus = container.querySelector('[data-role="tap-status"]');
@@ -450,7 +463,11 @@
 
         function getTapStepInBeats() {
             const mode = tapQuantizeSelect ? tapQuantizeSelect.value : 'sixteenth';
-            return mode === 'eighth' ? 0.5 : 0.25;
+            if (mode === 'quarter') return 1;
+            if (mode === 'eighth') return 0.5;
+            if (mode === 'eighth_triplet') return 1 / 3;
+            if (mode === 'sixteenth_triplet') return 1 / 6;
+            return 0.25;
         }
 
         function parseTapTimeSignature(value) {
@@ -465,6 +482,17 @@
         function getTapBpm() {
             const value = tapBpmInput ? parseInt(tapBpmInput.value, 10) : 120;
             return Math.max(40, Math.min(240, Number.isFinite(value) ? value : 120));
+        }
+
+        function getTapHumanizeAmount() {
+            const value = tapHumanizeSlider ? parseInt(tapHumanizeSlider.value, 10) : 0;
+            const clamped = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+            return clamped / 100;
+        }
+
+        function updateTapHumanizeLabel() {
+            if (!tapHumanizeValue || !tapHumanizeSlider) return;
+            tapHumanizeValue.textContent = String(tapHumanizeSlider.value) + '%';
         }
 
         function getAudioContextForTap() {
@@ -543,10 +571,13 @@
                 { token: 'h', pauseToken: 'hp', beats: 2 },
                 { token: 'q.', pauseToken: 'qp.', beats: 1.5 },
                 { token: 'q', pauseToken: 'qp', beats: 1 },
+                { token: 'qt', pauseToken: 'qtp', beats: 2 / 3 },
                 { token: 'e.', pauseToken: 'ep.', beats: 0.75 },
                 { token: 'e', pauseToken: 'ep', beats: 0.5 },
+                { token: 'et', pauseToken: 'etp', beats: 1 / 3 },
                 { token: 's.', pauseToken: 'sp.', beats: 0.375 },
                 { token: 's', pauseToken: 'sp', beats: 0.25 },
+                { token: 'st', pauseToken: 'stp', beats: 1 / 6 },
                 { token: 'f', pauseToken: 'fp', beats: 0.125 }
             ];
 
@@ -573,6 +604,7 @@
             const bpm = getTapBpm();
             const beatsPerSecond = bpm / 60;
             const step = getTapStepInBeats();
+            const humanizeAmount = getTapHumanizeAmount();
             const quantized = [];
 
             tapCapture.presses
@@ -582,8 +614,10 @@
                     const rawStart = (press.startMs - tapCapture.captureStartMs) * 0.001 * beatsPerSecond;
                     const rawEnd = (press.endMs - tapCapture.captureStartMs) * 0.001 * beatsPerSecond;
 
-                    let qStart = Math.round(rawStart / step) * step;
-                    let qEnd = Math.round(rawEnd / step) * step;
+                    const snappedStart = Math.round(rawStart / step) * step;
+                    const snappedEnd = Math.round(rawEnd / step) * step;
+                    let qStart = snappedStart + ((rawStart - snappedStart) * humanizeAmount);
+                    let qEnd = snappedEnd + ((rawEnd - snappedEnd) * humanizeAmount);
 
                     if (qStart < 0) qStart = 0;
                     if (qEnd <= qStart) qEnd = qStart + step;
@@ -652,24 +686,55 @@
 
             const beatsPerBar = getBeatsPerBarFromTime(tapTimeSelect ? tapTimeSelect.value : '4/4');
             let beatInBar = 0;
+            const EPSILON = 0.0001;
+            const generated = [];
 
-            const generated = rhythmEvents.map(function (event) {
-                const slice = createEmptySlice();
-                slice.rhythm = event.token;
-                if (!event.isPause) {
-                    slice.strings[5] = 'x';
-                }
+            rhythmEvents.forEach(function (event) {
+                const eventSlices = [];
+                let remaining = Math.max(0, event.beats || 0);
 
-                beatInBar += event.beats;
-                if (beatInBar >= beatsPerBar - 0.001) {
-                    slice.barAfter = true;
-                    beatInBar -= beatsPerBar;
-                    if (Math.abs(beatInBar) < 0.001) {
-                        beatInBar = 0;
+                while (remaining > EPSILON) {
+                    let beatsLeftInBar = beatsPerBar - beatInBar;
+                    if (beatsLeftInBar <= EPSILON) {
+                        beatsLeftInBar = beatsPerBar;
                     }
+
+                    const desiredChunk = Math.min(remaining, beatsLeftInBar);
+                    const chunkRhythm = normalizeDurationToRhythm(desiredChunk, !!event.isPause);
+                    const chunkBeats = Math.min(remaining, beatsLeftInBar, chunkRhythm.beats);
+
+                    const slice = createEmptySlice();
+                    slice.rhythm = chunkRhythm.token;
+                    if (!event.isPause) {
+                        slice.strings[5] = 'x';
+                    }
+
+                    beatInBar += chunkBeats;
+                    remaining -= chunkBeats;
+
+                    if (beatInBar >= beatsPerBar - EPSILON) {
+                        slice.barAfter = true;
+                        beatInBar -= beatsPerBar;
+                        if (Math.abs(beatInBar) < EPSILON) {
+                            beatInBar = 0;
+                        }
+                    }
+
+                    if (remaining < EPSILON) {
+                        remaining = 0;
+                    }
+
+                    eventSlices.push(slice);
                 }
 
-                return slice;
+                if (!event.isPause && eventSlices.length > 1) {
+                    eventSlices[0].rhythm = eventSlices[0].rhythm + '>';
+                    eventSlices[eventSlices.length - 1].rhythm = '<' + eventSlices[eventSlices.length - 1].rhythm;
+                }
+
+                eventSlices.forEach(function (slice) {
+                    generated.push(slice);
+                });
             });
 
             state.slices = generated.length > 0 ? generated : [createEmptySlice()];
@@ -682,7 +747,7 @@
             state.selectedSlice = 0;
             render();
             buildExportAndPreview();
-            setTapStatus('Applied ' + generated.length + ' rhythm slices. Replace low E "x" with your fretted notes.');
+            setTapStatus('Applied ' + generated.length + ' rhythm slices. Held notes crossing bars are exported as tied groups.');
         }
 
         function beginPress(nowMs) {
@@ -1701,6 +1766,10 @@
             if (globalMetronomeBpm && globalMetronomeBpm.value) {
                 tapBpmInput.value = globalMetronomeBpm.value;
             }
+        }
+        if (tapHumanizeSlider) {
+            updateTapHumanizeLabel();
+            tapHumanizeSlider.addEventListener('input', updateTapHumanizeLabel);
         }
         container.querySelector('[data-action="clear-all"]').addEventListener('click', function () {
             stopTapMetronome();
